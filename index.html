@@ -28,6 +28,19 @@
     .section-head{padding:17px 20px;background:linear-gradient(180deg,#fff,#f8faff);border-bottom:1px solid #edf1f6;font-weight:700}
     .table-wrap{overflow:auto}.table{width:100%;border-collapse:collapse;min-width:700px}.table th,.table td{text-align:left;padding:14px 18px;border-bottom:1px solid #edf1f6;font-size:13px}.table th{color:#667085;background:#f8fafc;font-weight:650}.table tr:hover td{background:#fafcff}
     .notes{padding:20px;border-left:5px solid #4f46e5;min-height:70px;color:#4b5563}
+    .data-nav{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 18px}
+    .data-nav button{border:1px solid #dfe6f0;background:#fff;color:#4b5563;border-radius:999px;padding:8px 13px;font-size:12px;font-weight:650;cursor:pointer}
+    .data-nav button:hover,.data-nav button.active{background:#eef3ff;border-color:#cbd8ff;color:#315efb}
+    .data-section{scroll-margin-top:20px}
+    .section-meta{font-weight:500;color:#8994a6;font-size:12px;margin-left:8px}
+    .badge{display:inline-block;padding:5px 9px;border-radius:999px;background:#eef3ff;color:#315efb;border:1px solid #dbe7ff;font-size:11px;font-weight:650}
+    .badge.green{background:#ecfdf5;color:#047857;border-color:#bbf7d0}
+    .badge.orange{background:#fff7ed;color:#c2410c;border-color:#fed7aa}
+    .badge.red{background:#fff1f2;color:#be123c;border-color:#fecdd3}
+    .mini-title{font-weight:700;color:#172033}
+    .subtext{display:block;color:#8994a6;font-size:11px;margin-top:3px}
+    @media(max-width:600px){.data-nav{overflow-x:auto;flex-wrap:nowrap;padding-bottom:4px}.data-nav button{white-space:nowrap}}
+
     .system{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;padding:18px}.sys{background:#f8fafc;border:1px solid #e9eef5;border-radius:12px;padding:16px}.sys b{display:block;font-size:22px;margin-top:5px}
     footer{text-align:center;padding:18px;color:#8490a3;font-size:12px}
     #loading{position:fixed;inset:0;background:rgba(245,248,252,.9);display:none;align-items:center;justify-content:center;z-index:10;font-weight:650}
@@ -52,10 +65,10 @@
   <div class="secondary">
     <div class="card"><div class="label">Payment Collection</div><div class="value" id="collection">0.0%</div><div class="progress"><div class="bar" id="collectionBar"></div></div></div>
     <div class="card"><div class="label">Conversion Rate</div><div class="value" id="conversion">0.0%</div><div class="progress"><div class="bar" id="conversionBar"></div></div></div>
-    <div class="card"><div class="label">Activity Overview</div><div class="value" id="activity">0</div><div class="muted">Tasks recorded</div></div>
+    <div class="card"><div class="label">Activity Overview</div><div class="value" id="activity">0</div><div class="muted">Tasks + team activity</div></div>
   </div>
   <div class="section">
-    <div class="section-head">Recent Prospects</div>
+    <div class="section-head">Recent Prospects <span class="section-meta">Latest records from your Prospects sheet</span></div>
     <div class="table-wrap"><table class="table"><thead><tr><th>Name</th><th>Business</th><th>Service</th><th>Quote</th><th>Status</th><th>Follow-up</th></tr></thead><tbody id="leadsTable"><tr><td colspan="6">Loading...</td></tr></tbody></table></div>
   </div>
   <div class="section"><div class="section-head">Owner Notes</div><div class="notes" id="notes">No owner notes have been added yet.</div></div>
@@ -64,6 +77,70 @@
     <div class="sys">Tasks<b id="tasks">0</b></div>
     <div class="sys">Team Members<b id="team">0</b></div>
   </div></div>
+
+  <div class="data-nav" id="dataNav">
+    <button class="active" data-target="prospectsSection">Prospects</button>
+    <button data-target="clientsSection">Clients</button>
+    <button data-target="projectsSection">Projects</button>
+    <button data-target="tasksSection">Tasks</button>
+    <button data-target="teamSection">Team</button>
+    <button data-target="invoicesSection">Invoices</button>
+    <button data-target="paymentsSection">Payments</button>
+    <button data-target="activitiesSection">Activities</button>
+    <button data-target="followupsSection">Follow-ups</button>
+    <button data-target="documentsSection">Documents</button>
+  </div>
+
+  <div class="section data-section" id="prospectsSection">
+    <div class="section-head">Prospects <span class="section-meta" id="prospectsMeta">0 records</span></div>
+    <div class="table-wrap"><table class="table"><thead><tr><th>Name</th><th>Business</th><th>Contact</th><th>Service</th><th>Source</th><th>Quote</th><th>Status</th><th>Follow-up</th></tr></thead><tbody id="prospectsTable"></tbody></table></div>
+  </div>
+
+  <div class="section data-section" id="clientsSection">
+    <div class="section-head">Clients <span class="section-meta" id="clientsMeta">0 records</span></div>
+    <div class="table-wrap"><table class="table"><thead><tr><th>Client</th><th>Business</th><th>Contact</th><th>Service</th><th>Contract</th><th>Start Date</th><th>Status</th></tr></thead><tbody id="clientsTable"></tbody></table></div>
+  </div>
+
+  <div class="section data-section" id="projectsSection">
+    <div class="section-head">Projects <span class="section-meta" id="projectsMeta">0 records</span></div>
+    <div class="table-wrap"><table class="table"><thead><tr><th>Project</th><th>Client</th><th>Service</th><th>Dates</th><th>Status</th><th>Priority</th><th>Manager</th></tr></thead><tbody id="projectsTable"></tbody></table></div>
+  </div>
+
+  <div class="section data-section" id="tasksSection">
+    <div class="section-head">Tasks <span class="section-meta" id="tasksMeta">0 records</span></div>
+    <div class="table-wrap"><table class="table"><thead><tr><th>Task</th><th>Project</th><th>Client</th><th>Assigned To</th><th>Priority</th><th>Deadline</th><th>Status</th><th>Progress</th></tr></thead><tbody id="tasksTable"></tbody></table></div>
+  </div>
+
+  <div class="section data-section" id="teamSection">
+    <div class="section-head">Team <span class="section-meta" id="teamMeta">0 records</span></div>
+    <div class="table-wrap"><table class="table"><thead><tr><th>Name</th><th>Role</th><th>Contact</th><th>Joining Date</th><th>Status</th></tr></thead><tbody id="teamTable"></tbody></table></div>
+  </div>
+
+  <div class="section data-section" id="invoicesSection">
+    <div class="section-head">Invoices <span class="section-meta" id="invoicesMeta">0 records</span></div>
+    <div class="table-wrap"><table class="table"><thead><tr><th>Invoice</th><th>Client</th><th>Project</th><th>Invoice Date</th><th>Due Date</th><th>Amount</th><th>Paid</th><th>Balance</th><th>Status</th></tr></thead><tbody id="invoicesTable"></tbody></table></div>
+  </div>
+
+  <div class="section data-section" id="paymentsSection">
+    <div class="section-head">Payments <span class="section-meta" id="paymentsMeta">0 records</span></div>
+    <div class="table-wrap"><table class="table"><thead><tr><th>Payment</th><th>Client</th><th>Project</th><th>Invoice</th><th>Date</th><th>Amount</th><th>Method</th><th>Status</th></tr></thead><tbody id="paymentsTable"></tbody></table></div>
+  </div>
+
+  <div class="section data-section" id="activitiesSection">
+    <div class="section-head">Activities <span class="section-meta" id="activitiesMeta">0 records</span></div>
+    <div class="table-wrap"><table class="table"><thead><tr><th>Type</th><th>Client</th><th>Project</th><th>Date</th><th>Description</th><th>User</th></tr></thead><tbody id="activitiesTable"></tbody></table></div>
+  </div>
+
+  <div class="section data-section" id="followupsSection">
+    <div class="section-head">Follow-ups <span class="section-meta" id="followupsMeta">0 records</span></div>
+    <div class="table-wrap"><table class="table"><thead><tr><th>Prospect</th><th>Client</th><th>Date</th><th>Type</th><th>Purpose</th><th>Status</th><th>Next Follow-up</th></tr></thead><tbody id="followupsTable"></tbody></table></div>
+  </div>
+
+  <div class="section data-section" id="documentsSection">
+    <div class="section-head">Documents <span class="section-meta" id="documentsMeta">0 records</span></div>
+    <div class="table-wrap"><table class="table"><thead><tr><th>Document</th><th>Type</th><th>Client</th><th>Project</th><th>Date</th><th>File</th><th>Notes</th></tr></thead><tbody id="documentsTable"></tbody></table></div>
+  </div>
+
 </main>
 <footer>Project Matrix · Google Sheets</footer>
 </div>
@@ -75,6 +152,61 @@
   const money = n => '₹' + Number(n || 0).toLocaleString('en-IN',{maximumFractionDigits:2});
   const pct = n => Number(n || 0).toFixed(1) + '%';
 
+  function rowsOf(block){ return block && Array.isArray(block.rows) ? block.rows : []; }
+  function text(v){ return v === null || v === undefined || String(v).trim() === '' ? '-' : String(v); }
+  function statusBadge(v){
+    if(!v) return '-';
+    const s=String(v), n=s.toLowerCase();
+    const cls=n.includes('completed')||n.includes('received')||n.includes('active')||n.includes('paid') ? 'green' : (n.includes('pending')||n.includes('planning')||n.includes('partial')||n.includes('new') ? 'orange' : '');
+    return '<span class="badge '+cls+'">'+esc(s)+'</span>';
+  }
+  function contact(r){
+    const phone=text(r.Phone), email=text(r.Email);
+    return '<span>'+esc(phone)+'</span><span class="subtext">'+esc(email)+'</span>';
+  }
+  function setTable(id, rows, builder, colspan, metaId){
+    const table=document.getElementById(id), meta=document.getElementById(metaId);
+    if(meta) meta.textContent=rows.length+' record'+(rows.length===1?'':'s');
+    table.innerHTML=rows.length ? rows.map(builder).join('') : '<tr><td colspan="'+colspan+'" class="empty">No records found.</td></tr>';
+  }
+
+  function renderDataTables(data){
+    const prospects=rowsOf(data.prospectsData), clients=rowsOf(data.clientsData), projects=rowsOf(data.projectsData);
+    const tasks=rowsOf(data.tasksData), team=rowsOf(data.teamData), invoices=rowsOf(data.invoicesData);
+    const payments=rowsOf(data.paymentsData), activities=rowsOf(data.activitiesData), followups=rowsOf(data.followUpsData);
+    const documents=rowsOf(data.documentsData);
+
+    setTable('prospectsTable',prospects,r =>
+      '<tr><td><span class="mini-title">'+esc(r.Name)+'</span></td><td>'+esc(r.Business)+'</td><td>'+contact(r)+'</td><td>'+esc(r.Service)+'</td><td>'+esc(r.Source)+'</td><td>'+money(r.Quote)+'</td><td>'+statusBadge(r.Status)+'</td><td>'+esc(r['Follow-up Date'])+'</td></tr>',8,'prospectsMeta');
+
+    setTable('clientsTable',clients,r =>
+      '<tr><td><span class="mini-title">'+esc(r.Name)+'</span></td><td>'+esc(r.Business)+'</td><td>'+contact(r)+'</td><td>'+esc(r.Service)+'</td><td>'+money(r['Contract Value'])+'</td><td>'+esc(r['Start Date'])+'</td><td>'+statusBadge(r.Status)+'</td></tr>',7,'clientsMeta');
+
+    setTable('projectsTable',projects,r =>
+      '<tr><td><span class="mini-title">'+esc(r['Project Name'])+'</span><span class="subtext">'+esc(r['Project ID'])+'</span></td><td>'+esc(r.clientBusiness || r.clientName)+'</td><td>'+esc(r.Service)+'</td><td>'+esc(r['Start Date'])+' → '+esc(r.Deadline)+'</td><td>'+statusBadge(r.Status)+'</td><td>'+statusBadge(r.Priority)+'</td><td>'+esc(r.Manager)+'</td></tr>',7,'projectsMeta');
+
+    setTable('tasksTable',tasks,r =>
+      '<tr><td><span class="mini-title">'+esc(r['Task Name'])+'</span><span class="subtext">'+esc(r['Task ID'])+'</span></td><td>'+esc(r.projectName)+'</td><td>'+esc(r.clientName)+'</td><td>'+esc(r.assignedToName)+'</td><td>'+statusBadge(r.Priority)+'</td><td>'+esc(r.Deadline)+'</td><td>'+statusBadge(r.Status)+'</td><td>'+esc(r.Progress)+'%</td></tr>',8,'tasksMeta');
+
+    setTable('teamTable',team,r =>
+      '<tr><td><span class="mini-title">'+esc(r.Name)+'</span></td><td>'+esc(r.Role)+'</td><td>'+contact(r)+'</td><td>'+esc(r['Joining Date'])+'</td><td>'+statusBadge(r.Status)+'</td></tr>',5,'teamMeta');
+
+    setTable('invoicesTable',invoices,r =>
+      '<tr><td><span class="mini-title">'+esc(r['Invoice ID'])+'</span></td><td>'+esc(r.clientName)+'</td><td>'+esc(r.projectName)+'</td><td>'+esc(r['Invoice Date'])+'</td><td>'+esc(r['Due Date'])+'</td><td>'+money(r.Amount)+'</td><td>'+money(r['Paid Amount'])+'</td><td>'+money(r.Balance)+'</td><td>'+statusBadge(r.Status)+'</td></tr>',9,'invoicesMeta');
+
+    setTable('paymentsTable',payments,r =>
+      '<tr><td><span class="mini-title">'+esc(r['Payment ID'])+'</span></td><td>'+esc(r.clientName)+'</td><td>'+esc(r.projectName)+'</td><td>'+esc(r.invoiceName || r['Invoice ID'])+'</td><td>'+esc(r['Payment Date'])+'</td><td>'+money(r.Amount)+'</td><td>'+esc(r['Payment Method'])+'</td><td>'+statusBadge(r.Status)+'</td></tr>',8,'paymentsMeta');
+
+    setTable('activitiesTable',activities,r =>
+      '<tr><td>'+statusBadge(r['Activity Type'])+'</td><td>'+esc(r.clientName)+'</td><td>'+esc(r.projectName)+'</td><td>'+esc(r.Date)+'</td><td>'+esc(r.Description)+'</td><td>'+esc(r.userName || r.User)+'</td></tr>',6,'activitiesMeta');
+
+    setTable('followupsTable',followups,r =>
+      '<tr><td>'+esc(r.prospectName)+'</td><td>'+esc(r.clientName)+'</td><td>'+esc(r.Date)+'</td><td>'+esc(r.Type)+'</td><td>'+esc(r.Purpose)+'</td><td>'+statusBadge(r.Status)+'</td><td>'+esc(r['Next Follow-up'])+'</td></tr>',7,'followupsMeta');
+
+    setTable('documentsTable',documents,r =>
+      '<tr><td><span class="mini-title">'+esc(r['Document Name'])+'</span></td><td>'+esc(r['Document Type'])+'</td><td>'+esc(r.clientName)+'</td><td>'+esc(r.projectName)+'</td><td>'+esc(r.Date)+'</td><td>'+ (r['File Link'] ? '<a href="'+esc(r['File Link'])+'" target="_blank" rel="noopener">Open file</a>' : '-') +'</td><td>'+esc(r.Notes)+'</td></tr>',7,'documentsMeta');
+  }
+
   function render(data){
     document.getElementById('leads').textContent = data.leads || 0;
     document.getElementById('clients').textContent = data.clients || 0;
@@ -82,7 +214,7 @@
     document.getElementById('pending').textContent = money(data.pendingRevenue);
     document.getElementById('collection').textContent = pct(data.paymentCollection);
     document.getElementById('conversion').textContent = pct(data.conversionRate);
-    document.getElementById('activity').textContent = data.tasks || 0;
+    document.getElementById('activity').textContent = (data.tasks || 0) + (data.team || 0);
     document.getElementById('payments').textContent = data.payments || 0;
     document.getElementById('tasks').textContent = data.tasks || 0;
     document.getElementById('team').textContent = data.team || 0;
@@ -92,10 +224,11 @@
 
     const rows = data.recentLeads || [];
     document.getElementById('leadsTable').innerHTML = rows.length ? rows.map(r =>
-      '<tr><td>'+esc(r.name)+'</td><td>'+esc(r.business)+'</td><td>'+esc(r.service)+'</td><td>'+esc(r.quote)+'</td><td>'+esc(r.status)+'</td><td>'+esc(r.followUp)+'</td></tr>'
+      '<tr><td>'+esc(r.name)+'</td><td>'+esc(r.business)+'</td><td>'+esc(r.service)+'</td><td>'+money(r.quote)+'</td><td>'+statusBadge(r.status)+'</td><td>'+esc(r.followUp)+'</td></tr>'
     ).join('') : '<tr><td colspan="6">No prospects found.</td></tr>';
 
-    document.getElementById('updated').textContent = 'Last updated: ' + new Date().toLocaleTimeString();
+    renderDataTables(data);
+    document.getElementById('updated').textContent = 'Last updated: ' + new Date().toLocaleTimeString('en-IN');
   }
 
   function esc(v){
@@ -157,6 +290,16 @@
       document.getElementById('loading').style.display='none';
     }
   }
+
+
+  document.querySelectorAll('#dataNav button').forEach(function(button){
+    button.addEventListener('click',function(){
+      document.querySelectorAll('#dataNav button').forEach(function(b){b.classList.remove('active')});
+      button.classList.add('active');
+      const target=document.getElementById(button.dataset.target);
+      if(target) target.scrollIntoView({behavior:'smooth',block:'start'});
+    });
+  });
 
   // Show the dashboard immediately. If cached data exists, display it now.
   // Fresh Google Sheets data is fetched in the background and replaces it
