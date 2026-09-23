@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Project Matrix</title>
+  <style>
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,Segoe UI,Arial,sans-serif;background:#f5f8fc;color:#172033}
+    .app{min-height:100vh}
+    header{background:linear-gradient(135deg,#111c44,#263b91 55%,#2563eb);color:#fff;padding:24px 28px;box-shadow:0 8px 30px rgba(17,28,68,.18)}
+    .header-inner{max-width:1400px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:20px}
+    h1{margin:0;font-size:28px}.subtitle{margin:5px 0 0;opacity:.82;font-size:14px}
+    .connection{display:flex;align-items:center;gap:8px;padding:9px 13px;border:1px solid rgba(255,255,255,.25);border-radius:999px;background:rgba(255,255,255,.12);font-size:13px}
+    .dot{width:8px;height:8px;border-radius:50%;background:#35d07f}
+    main{max-width:1400px;margin:0 auto;padding:28px}
+    .title-row{display:flex;justify-content:space-between;align-items:end;margin-bottom:20px}
+    h2{margin:0;font-size:24px}.muted{color:#718096;font-size:13px}
+    .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:18px}
+    .card{background:#fff;border:1px solid #e7ecf3;border-radius:16px;padding:20px;box-shadow:0 7px 24px rgba(20,39,75,.06);position:relative;overflow:hidden}
+    .kpi:after{content:"";position:absolute;left:0;right:0;bottom:0;height:4px;background:#2563eb}
+    .kpi:nth-child(2):after{background:#6366f1}.kpi:nth-child(3):after{background:#10b981}.kpi:nth-child(4):after{background:#f59e0b}
+    .label{font-size:13px;color:#718096;margin-bottom:9px}.value{font-size:30px;font-weight:750;letter-spacing:-.5px}
+    .secondary{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:18px}
+    .secondary .card{border-left:5px solid #2563eb}.secondary .card:nth-child(2){border-left-color:#6366f1}.secondary .card:nth-child(3){border-left-color:#10b981}
+    .progress{height:8px;background:#edf2f7;border-radius:99px;overflow:hidden;margin-top:12px}.bar{height:100%;background:#2563eb;border-radius:99px;width:0;transition:width .35s}
+    .section{background:#fff;border:1px solid #e7ecf3;border-radius:16px;overflow:hidden;box-shadow:0 7px 24px rgba(20,39,75,.06);margin-bottom:18px}
+    .section-head{padding:17px 20px;background:linear-gradient(180deg,#fff,#f8faff);border-bottom:1px solid #edf1f6;font-weight:700}
+    .table-wrap{overflow:auto}.table{width:100%;border-collapse:collapse;min-width:700px}.table th,.table td{text-align:left;padding:14px 18px;border-bottom:1px solid #edf1f6;font-size:13px}.table th{color:#667085;background:#f8fafc;font-weight:650}.table tr:hover td{background:#fafcff}
+    .notes{padding:20px;border-left:5px solid #4f46e5;min-height:70px;color:#4b5563}
+    .system{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;padding:18px}.sys{background:#f8fafc;border:1px solid #e9eef5;border-radius:12px;padding:16px}.sys b{display:block;font-size:22px;margin-top:5px}
+    footer{text-align:center;padding:18px;color:#8490a3;font-size:12px}
+    #loading{position:fixed;inset:0;background:rgba(245,248,252,.9);display:flex;align-items:center;justify-content:center;z-index:10;font-weight:650}
+    #error{display:none;background:#fff1f2;color:#9f1239;border:1px solid #fecdd3;padding:14px 16px;border-radius:12px;margin-bottom:18px}
+    @media(max-width:900px){.grid{grid-template-columns:repeat(2,1fr)}.secondary{grid-template-columns:1fr}.system{grid-template-columns:1fr}}
+    @media(max-width:600px){header{padding:20px}.header-inner{align-items:flex-start;flex-direction:column}main{padding:20px}.grid{grid-template-columns:1fr}.value{font-size:27px}.title-row{align-items:flex-start;flex-direction:column;gap:6px}}
+  </style>
+</head>
+<body>
+<div id="loading">Loading Project Matrix...</div>
+<div class="app">
+<header><div class="header-inner"><div><h1>Project Matrix</h1><div class="subtitle">Business &amp; Project Management</div></div><div class="connection"><span class="dot"></span>Connected to Google Sheets</div></div></header>
+<main>
+  <div class="title-row"><div><h2>Project Matrix Overview</h2><div class="muted" id="updated">Last updated: —</div></div></div>
+  <div id="error"></div>
+  <div class="grid">
+    <div class="card kpi"><div class="label">Total Prospects</div><div class="value" id="leads">0</div></div>
+    <div class="card kpi"><div class="label">Total Clients</div><div class="value" id="clients">0</div></div>
+    <div class="card kpi"><div class="label">Revenue</div><div class="value" id="revenue">₹0</div></div>
+    <div class="card kpi"><div class="label">Pending Revenue</div><div class="value" id="pending">₹0</div></div>
+  </div>
+  <div class="secondary">
+    <div class="card"><div class="label">Payment Collection</div><div class="value" id="collection">0.0%</div><div class="progress"><div class="bar" id="collectionBar"></div></div></div>
+    <div class="card"><div class="label">Conversion Rate</div><div class="value" id="conversion">0.0%</div><div class="progress"><div class="bar" id="conversionBar"></div></div></div>
+    <div class="card"><div class="label">Activity Overview</div><div class="value" id="activity">0</div><div class="muted">Tasks recorded</div></div>
+  </div>
+  <div class="section">
+    <div class="section-head">Recent Prospects</div>
+    <div class="table-wrap"><table class="table"><thead><tr><th>Name</th><th>Business</th><th>Service</th><th>Quote</th><th>Status</th><th>Follow-up</th></tr></thead><tbody id="leadsTable"><tr><td colspan="6">Loading...</td></tr></tbody></table></div>
+  </div>
+  <div class="section"><div class="section-head">Owner Notes</div><div class="notes" id="notes">No owner notes have been added yet.</div></div>
+  <div class="section"><div class="section-head">System Overview</div><div class="system">
+    <div class="sys">Payments Records<b id="payments">0</b></div>
+    <div class="sys">Tasks<b id="tasks">0</b></div>
+    <div class="sys">Team Members<b id="team">0</b></div>
+  </div></div>
+</main>
+<footer>Project Matrix · Google Sheets</footer>
+</div>
+<script>
+  // Replace YOUR_SCRIPT_ID with the deployment ID from your Google Apps Script Web App URL.
+  const API_URL = 'https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec?api=dashboard';
+
+  const money = n => '₹' + Number(n || 0).toLocaleString('en-IN',{maximumFractionDigits:2});
+  const pct = n => Number(n || 0).toFixed(1) + '%';
+
+  function render(data){
+    document.getElementById('leads').textContent = data.leads || 0;
+    document.getElementById('clients').textContent = data.clients || 0;
+    document.getElementById('revenue').textContent = money(data.revenue);
+    document.getElementById('pending').textContent = money(data.pendingRevenue);
+    document.getElementById('collection').textContent = pct(data.paymentCollection);
+    document.getElementById('conversion').textContent = pct(data.conversionRate);
+    document.getElementById('activity').textContent = data.tasks || 0;
+    document.getElementById('payments').textContent = data.payments || 0;
+    document.getElementById('tasks').textContent = data.tasks || 0;
+    document.getElementById('team').textContent = data.team || 0;
+    document.getElementById('collectionBar').style.width = Math.min(100,Math.max(0,Number(data.paymentCollection||0))) + '%';
+    document.getElementById('conversionBar').style.width = Math.min(100,Math.max(0,Number(data.conversionRate||0))) + '%';
+    document.getElementById('notes').textContent = data.ownerNotes || 'No owner notes have been added yet.';
+
+    const rows = data.recentLeads || [];
+    document.getElementById('leadsTable').innerHTML = rows.length ? rows.map(r =>
+      '<tr><td>'+esc(r.name)+'</td><td>'+esc(r.business)+'</td><td>'+esc(r.service)+'</td><td>'+esc(r.quote)+'</td><td>'+esc(r.status)+'</td><td>'+esc(r.followUp)+'</td></tr>'
+    ).join('') : '<tr><td colspan="6">No prospects found.</td></tr>';
+
+    document.getElementById('updated').textContent = 'Last updated: ' + new Date().toLocaleTimeString();
+  }
+
+  function esc(v){
+    return String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  async function refreshDashboard(){
+    const error = document.getElementById('error');
+    try{
+      if(API_URL.includes('YOUR_SCRIPT_ID')) throw new Error('Google Apps Script API URL is not configured yet.');
+      const response = await fetch(API_URL, {cache:'no-store'});
+      if(!response.ok) throw new Error('Dashboard API request failed (' + response.status + ')');
+      const data = await response.json();
+      render(data);
+      error.style.display='none';
+    }catch(e){
+      console.error('Project Matrix refresh failed:', e);
+      error.textContent = 'Project Matrix Error: ' + e.message;
+      error.style.display='block';
+    }finally{
+      document.getElementById('loading').style.display='none';
+    }
+  }
+
+  refreshDashboard();
+  setInterval(refreshDashboard,30000);
+</script>
+</body>
+</html>
