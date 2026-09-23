@@ -100,6 +100,23 @@
     return String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   }
 
+  let hasRenderedData = false;
+
+  function loadCachedDashboard(){
+    try{
+      const cached = localStorage.getItem('projectMatrixDashboard');
+      if(!cached) return false;
+      const data = JSON.parse(cached);
+      if(!data || typeof data !== 'object') return false;
+      render(data);
+      hasRenderedData = true;
+      return true;
+    }catch(e){
+      localStorage.removeItem('projectMatrixDashboard');
+      return false;
+    }
+  }
+
   async function refreshDashboard(){
     const error = document.getElementById('error');
     try{
@@ -107,16 +124,22 @@
       if(!response.ok) throw new Error('Dashboard API request failed (' + response.status + ')');
       const data = await response.json();
       render(data);
+      hasRenderedData = true;
+      try{ localStorage.setItem('projectMatrixDashboard', JSON.stringify(data)); }catch(e){}
       error.style.display='none';
     }catch(e){
       console.error('Project Matrix refresh failed:', e);
-      error.textContent = 'Project Matrix Error: ' + e.message;
-      error.style.display='block';
+      if(!hasRenderedData){
+        error.textContent = 'Project Matrix Error: ' + e.message;
+        error.style.display='block';
+      }
     }finally{
       document.getElementById('loading').style.display='none';
     }
   }
 
+  // Render the last successful snapshot immediately, then sync fresh data.
+  loadCachedDashboard();
   refreshDashboard();
   setInterval(refreshDashboard,30000);
 </script>
