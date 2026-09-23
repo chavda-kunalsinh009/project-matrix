@@ -12,6 +12,11 @@
     .header-inner{max-width:1400px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:20px}
     h1{margin:0;font-size:28px}.subtitle{margin:5px 0 0;opacity:.82;font-size:14px}
     .connection{display:flex;align-items:center;gap:8px;padding:9px 13px;border:1px solid rgba(255,255,255,.25);border-radius:999px;background:rgba(255,255,255,.12);font-size:13px}
+    .header-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    .admin-btn{border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.12);color:#fff;border-radius:9px;padding:9px 13px;font-size:12px;font-weight:700;cursor:pointer}
+    .admin-btn:hover{background:rgba(255,255,255,.2)}
+    .admin-btn.active{background:#fff;color:#1f3fb8;border-color:#fff}
+    .admin-state{font-size:11px;opacity:.9}
     .dot{width:8px;height:8px;border-radius:50%;background:#35d07f}
     main{max-width:1400px;margin:0 auto;padding:28px}
     .title-row{display:flex;justify-content:space-between;align-items:end;margin-bottom:20px}
@@ -66,7 +71,7 @@
 <body>
 <div id="loading">Loading Project Matrix...</div>
 <div class="app">
-<header><div class="header-inner"><div><h1>Project Matrix</h1><div class="subtitle">Business &amp; Project Management</div></div><div class="connection"><span class="dot"></span>Connected to Google Sheets</div></div></header>
+<header><div class="header-inner"><div><h1>Project Matrix</h1><div class="subtitle">Business &amp; Project Management</div></div><div class="header-actions"><div class="connection"><span class="dot"></span>Connected to Google Sheets</div><button class="admin-btn" id="adminModeBtn" type="button">Admin Mode</button></div></div></header>
 <main>
   <div class="title-row"><div><h2>Project Matrix Overview</h2><div class="muted" id="updated">Last updated: —</div></div></div>
   <div id="error"></div>
@@ -107,7 +112,7 @@
 
   <div class="section data-section" id="prospectsSection">
     <div class="section-head">Prospects <span class="section-meta" id="prospectsMeta">0 records</span></div>
-    <div class="prospect-toolbar"><button class="btn primary-btn" id="addProspectBtn" type="button">+ Add Prospect</button></div>
+    <div class="prospect-toolbar"><span class="admin-state" id="prospectPermissionState"></span><button class="btn primary-btn" id="addProspectBtn" type="button">+ Add Prospect</button></div>
     <div class="table-wrap"><table class="table"><thead><tr><th>Name</th><th>Business</th><th>Contact</th><th>Service</th><th>Source</th><th>Quote</th><th>Status</th><th>Follow-up</th><th>Actions</th></tr></thead><tbody id="prospectsTable"></tbody></table></div>
   </div>
 
@@ -159,6 +164,19 @@
 </main>
 <footer>Project Matrix · Google Sheets</footer>
 
+  <div id="adminModal" class="modal-backdrop" aria-hidden="true">
+    <div class="modal-card" style="width:min(420px,100%)">
+      <div class="modal-head"><div><h3>Admin Mode</h3><div class="muted">Enter the Admin PIN to enable editing and deletion.</div></div><button class="modal-close" id="adminModalClose" type="button">×</button></div>
+      <form id="adminForm" style="padding:20px">
+        <label style="font-size:12px;font-weight:650;color:#475467">Admin PIN
+          <input id="adminPin" type="password" inputmode="numeric" autocomplete="current-password" required style="display:block;width:100%;margin-top:6px;border:1px solid #d0d5dd;border-radius:8px;padding:10px;font:inherit;font-size:13px;outline:none">
+        </label>
+        <div id="adminFormError" class="form-error"></div>
+        <div class="modal-actions"><button type="button" class="btn secondary-btn" id="adminCancel">Cancel</button><button type="submit" class="btn primary-btn" id="adminLogin">Enable Admin Mode</button></div>
+      </form>
+    </div>
+  </div>
+
   <div id="prospectModal" class="modal-backdrop" aria-hidden="true">
     <div class="modal-card">
       <div class="modal-head"><div><h3 id="prospectModalTitle">Add Prospect</h3><div class="muted">Changes are saved to Google Sheets.</div></div><button class="modal-close" id="prospectModalClose" type="button">×</button></div>
@@ -187,6 +205,8 @@
   const API_URL = '/api/dashboard';
   const CACHE_KEY = 'projectMatrixDashboard';
   const REFRESH_MS = 30000;
+  const ADMIN_TOKEN_KEY = 'projectMatrixAdminToken';
+  let isAdminMode = false;
 
   const money = n => '₹' + Number(n || 0).toLocaleString('en-IN',{maximumFractionDigits:2});
   const pct = n => Number(n || 0).toFixed(1) + '%';
@@ -216,7 +236,7 @@
     const documents=rowsOf(data.documentsData);
 
     setTable('prospectsTable',prospects,r =>
-      '<tr><td><span class="mini-title">'+esc(r.Name)+'</span></td><td>'+esc(r.Business)+'</td><td>'+contact(r)+'</td><td>'+esc(r.Service)+'</td><td>'+esc(r.Source)+'</td><td>'+money(r.Quote)+'</td><td>'+statusBadge(r.Status)+'</td><td>'+esc(r['Follow-up Date'])+'</td><td><button class="action-btn" type="button" data-prospect-edit="'+esc(r['Prospect ID'])+'">Edit</button><button class="action-btn" type="button" data-prospect-delete="'+esc(r['Prospect ID'])+'">Delete</button></td></tr>',10,'prospectsMeta');
+      '<tr><td><span class="mini-title">'+esc(r.Name)+'</span></td><td>'+esc(r.Business)+'</td><td>'+contact(r)+'</td><td>'+esc(r.Service)+'</td><td>'+esc(r.Source)+'</td><td>'+money(r.Quote)+'</td><td>'+statusBadge(r.Status)+'</td><td>'+esc(r['Follow-up Date'])+'</td><td>'+ (isAdminMode ? '<button class="action-btn" type="button" data-prospect-edit="'+esc(r['Prospect ID'])+'">Edit</button><button class="action-btn" type="button" data-prospect-delete="'+esc(r['Prospect ID'])+'">Delete</button>' : '<span class="muted">View only</span>') +'</td></tr>',10,'prospectsMeta');
 
     setTable('clientsTable',clients,r =>
       '<tr><td><span class="mini-title">'+esc(r.Name)+'</span></td><td>'+esc(r.Business)+'</td><td>'+contact(r)+'</td><td>'+esc(r.Service)+'</td><td>'+money(r['Contract Value'])+'</td><td>'+esc(r['Start Date'])+'</td><td>'+statusBadge(r.Status)+'</td></tr>',7,'clientsMeta');
@@ -278,7 +298,11 @@
 
 
   async function mutateProspect(action, payload){
-    const response = await fetch('/api/mutate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({entity:'prospect',action,payload})});
+    if((action==='update' || action==='delete') && !isAdminMode){
+      throw new Error('Admin Mode is required for this action.');
+    }
+    const adminToken = sessionStorage.getItem(ADMIN_TOKEN_KEY) || '';
+    const response = await fetch('/api/mutate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({entity:'prospect',action,payload,adminToken})});
     const result = await response.json().catch(()=>({}));
     if(!response.ok || result.ok === false) throw new Error(result.error || 'Unable to save prospect');
     return result;
@@ -334,9 +358,11 @@
   }
   function bindProspectActions(){
     document.querySelectorAll('[data-prospect-edit]').forEach(b=>b.onclick=()=>{
+      if(!isAdminMode){ alert('Enable Admin Mode to edit prospects.'); return; }
       const r=currentProspects().find(x=>String(x['Prospect ID'])===String(b.dataset.prospectEdit)); if(r) openProspectModal(r);
     });
     document.querySelectorAll('[data-prospect-delete]').forEach(b=>b.onclick=async()=>{
+      if(!isAdminMode){ alert('Enable Admin Mode to delete prospects.'); return; }
       const r=currentProspects().find(x=>String(x['Prospect ID'])===String(b.dataset.prospectDelete));
       if(!r || !confirm('Delete prospect '+(r.Name||r['Prospect ID'])+'? This removes the row from Google Sheets.')) return;
       b.disabled=true;
@@ -402,6 +428,91 @@
 
 
 
+  async function adminRequest(action, pin=''){
+    const response = await fetch('/api/admin',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action,pin,adminToken:sessionStorage.getItem(ADMIN_TOKEN_KEY)||''})
+    });
+    const result = await response.json().catch(()=>({}));
+    if(!response.ok || result.ok === false) throw new Error(result.error || 'Admin authentication failed');
+    return result;
+  }
+
+  function updateAdminUI(){
+    const btn=document.getElementById('adminModeBtn');
+    const state=document.getElementById('prospectPermissionState');
+    if(isAdminMode){
+      btn.textContent='Admin Mode: ON';
+      btn.classList.add('active');
+      state.textContent='Admin access enabled · Edit/Delete available';
+    }else{
+      btn.textContent='Admin Mode';
+      btn.classList.remove('active');
+      state.textContent='Add is available to all users · Edit/Delete require Admin Mode';
+    }
+  }
+
+  function openAdminModal(){
+    document.getElementById('adminPin').value='';
+    document.getElementById('adminFormError').style.display='none';
+    document.getElementById('adminModal').classList.add('open');
+    setTimeout(()=>document.getElementById('adminPin').focus(),50);
+  }
+
+  function closeAdminModal(){ document.getElementById('adminModal').classList.remove('open'); }
+
+  async function enableAdminMode(){
+    const btn=document.getElementById('adminLogin');
+    const err=document.getElementById('adminFormError');
+    btn.disabled=true; btn.textContent='Verifying...'; err.style.display='none';
+    try{
+      const result=await adminRequest('login',document.getElementById('adminPin').value);
+      sessionStorage.setItem(ADMIN_TOKEN_KEY,result.adminToken);
+      isAdminMode=true;
+      closeAdminModal();
+      updateAdminUI();
+      renderDataTables(window.__dashboardData || {});
+    }catch(e){
+      err.textContent=e.message;
+      err.style.display='block';
+    }finally{
+      btn.disabled=false; btn.textContent='Enable Admin Mode';
+    }
+  }
+
+  async function disableAdminMode(){
+    try{ await adminRequest('logout'); }catch(e){}
+    sessionStorage.removeItem(ADMIN_TOKEN_KEY);
+    isAdminMode=false;
+    closeProspectModal();
+    updateAdminUI();
+    renderDataTables(window.__dashboardData || {});
+  }
+
+  async function verifyAdminSession(){
+    const token=sessionStorage.getItem(ADMIN_TOKEN_KEY);
+    if(!token){ updateAdminUI(); return; }
+    try{
+      const result=await adminRequest('verify');
+      isAdminMode=!!result.valid;
+      if(!isAdminMode) sessionStorage.removeItem(ADMIN_TOKEN_KEY);
+    }catch(e){
+      sessionStorage.removeItem(ADMIN_TOKEN_KEY);
+      isAdminMode=false;
+    }
+    updateAdminUI();
+    if(window.__dashboardData) renderDataTables(window.__dashboardData);
+  }
+
+  document.getElementById('adminModeBtn').addEventListener('click',()=>{
+    if(isAdminMode) disableAdminMode(); else openAdminModal();
+  });
+  document.getElementById('adminModalClose').addEventListener('click',closeAdminModal);
+  document.getElementById('adminCancel').addEventListener('click',closeAdminModal);
+  document.getElementById('adminForm').addEventListener('submit',e=>{e.preventDefault();enableAdminMode()});
+  document.getElementById('adminModal').addEventListener('click',e=>{if(e.target.id==='adminModal')closeAdminModal()});
+
   document.getElementById('addProspectBtn').addEventListener('click',()=>openProspectModal());
   document.getElementById('prospectModalClose').addEventListener('click',closeProspectModal);
   document.getElementById('prospectCancel').addEventListener('click',closeProspectModal);
@@ -422,6 +533,8 @@
   // automatically when available.
   loadCachedDashboard();
   document.getElementById('loading').style.display='none';
+  updateAdminUI();
+  verifyAdminSession();
   refreshDashboard();
   setInterval(refreshDashboard, REFRESH_MS);
 </script>
