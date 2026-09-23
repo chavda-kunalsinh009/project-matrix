@@ -68,7 +68,6 @@
 <footer>Project Matrix · Google Sheets</footer>
 </div>
 <script>
-  // Replace YOUR_SCRIPT_ID with the deployment ID from your Google Apps Script Web App URL.
   const API_URL = 'https://script.google.com/macros/s/AKfycbzIU_K6LJczgEuU5dFS4FV5WEvVLBipTop0Gu__KfytMXN8z8nbXXbRAPpb3d_ESPDT/exec?api=dashboard';
 
   const money = n => '₹' + Number(n || 0).toLocaleString('en-IN',{maximumFractionDigits:2});
@@ -104,7 +103,6 @@
   async function refreshDashboard(){
     const error = document.getElementById('error');
     try{
-      if(API_URL.includes('YOUR_SCRIPT_ID')) throw new Error('Google Apps Script API URL is not configured yet.');
       const response = await fetch(API_URL, {cache:'no-store'});
       if(!response.ok) throw new Error('Dashboard API request failed (' + response.status + ')');
       const data = await response.json();
