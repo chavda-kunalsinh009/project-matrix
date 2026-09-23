@@ -68,7 +68,7 @@
 <footer>Project Matrix · Google Sheets</footer>
 </div>
 <script>
-  const API_URL = 'https://script.google.com/macros/s/AKfycbzIU_K6LJczgEuU5dFS4FV5WEvVLBipTop0Gu__KfytMXN8z8nbXXbRAPpb3d_ESPDT/exec?api=dashboard';
+  const API_URL = '/api/dashboard';
 
   const money = n => '₹' + Number(n || 0).toLocaleString('en-IN',{maximumFractionDigits:2});
   const pct = n => Number(n || 0).toFixed(1) + '%';
