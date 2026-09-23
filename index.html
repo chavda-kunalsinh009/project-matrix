@@ -47,6 +47,20 @@
     #error{display:none;background:#fff1f2;color:#9f1239;border:1px solid #fecdd3;padding:14px 16px;border-radius:12px;margin-bottom:18px}
     @media(max-width:900px){.grid{grid-template-columns:repeat(2,1fr)}.secondary{grid-template-columns:1fr}.system{grid-template-columns:1fr}}
     @media(max-width:600px){header{padding:20px}.header-inner{align-items:flex-start;flex-direction:column}main{padding:20px}.grid{grid-template-columns:1fr}.value{font-size:27px}.title-row{align-items:flex-start;flex-direction:column;gap:6px}}
+  
+    .prospect-toolbar{display:flex;justify-content:flex-end;padding:12px 18px;border-bottom:1px solid #edf1f6}
+    .btn{border:0;border-radius:9px;padding:9px 14px;font-size:12px;font-weight:700;cursor:pointer}
+    .primary-btn{background:#2563eb;color:#fff}.secondary-btn{background:#eef2f7;color:#344054}
+    .action-btn{border:1px solid #dfe6f0;background:#fff;border-radius:7px;padding:5px 8px;font-size:11px;cursor:pointer;margin-right:5px}.action-btn:hover{background:#f4f7fb}
+    .modal-backdrop{position:fixed;inset:0;background:rgba(15,23,42,.48);display:none;align-items:center;justify-content:center;padding:20px;z-index:30}
+    .modal-backdrop.open{display:flex}.modal-card{width:min(720px,100%);max-height:90vh;overflow:auto;background:#fff;border-radius:16px;box-shadow:0 20px 60px rgba(15,23,42,.25)}
+    .modal-head{display:flex;justify-content:space-between;align-items:flex-start;padding:20px;border-bottom:1px solid #edf1f6}.modal-head h3{margin:0 0 5px;font-size:20px}
+    .modal-close{border:0;background:#f2f4f7;border-radius:8px;width:34px;height:34px;font-size:22px;cursor:pointer}
+    #prospectForm{padding:20px}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .form-grid label{font-size:12px;font-weight:650;color:#475467}.form-grid input,.form-grid select,.form-grid textarea{display:block;width:100%;margin-top:6px;border:1px solid #d0d5dd;border-radius:8px;padding:10px;font:inherit;font-size:13px;outline:none}.form-grid input:focus,.form-grid select:focus,.form-grid textarea:focus{border-color:#7aa2ff;box-shadow:0 0 0 3px rgba(37,99,235,.08)}.form-grid .full{grid-column:1/-1}
+    .modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}.form-error{display:none;margin-top:12px;background:#fff1f2;color:#9f1239;border:1px solid #fecdd3;padding:10px;border-radius:8px;font-size:12px}
+    @media(max-width:600px){.form-grid{grid-template-columns:1fr}.form-grid .full{grid-column:auto}}
+
   </style>
 </head>
 <body>
@@ -93,7 +107,8 @@
 
   <div class="section data-section" id="prospectsSection">
     <div class="section-head">Prospects <span class="section-meta" id="prospectsMeta">0 records</span></div>
-    <div class="table-wrap"><table class="table"><thead><tr><th>Name</th><th>Business</th><th>Contact</th><th>Service</th><th>Source</th><th>Quote</th><th>Status</th><th>Follow-up</th></tr></thead><tbody id="prospectsTable"></tbody></table></div>
+    <div class="prospect-toolbar"><button class="btn primary-btn" id="addProspectBtn" type="button">+ Add Prospect</button></div>
+    <div class="table-wrap"><table class="table"><thead><tr><th>Name</th><th>Business</th><th>Contact</th><th>Service</th><th>Source</th><th>Quote</th><th>Status</th><th>Follow-up</th><th>Actions</th></tr></thead><tbody id="prospectsTable"></tbody></table></div>
   </div>
 
   <div class="section data-section" id="clientsSection">
@@ -143,6 +158,30 @@
 
 </main>
 <footer>Project Matrix · Google Sheets</footer>
+
+  <div id="prospectModal" class="modal-backdrop" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-head"><div><h3 id="prospectModalTitle">Add Prospect</h3><div class="muted">Changes are saved to Google Sheets.</div></div><button class="modal-close" id="prospectModalClose" type="button">×</button></div>
+      <form id="prospectForm">
+        <input type="hidden" id="prospectId">
+        <div class="form-grid">
+          <label>Name<input id="pName" required></label>
+          <label>Business<input id="pBusiness" required></label>
+          <label>Phone<input id="pPhone"></label>
+          <label>Email<input id="pEmail" type="email"></label>
+          <label>Service<input id="pService"></label>
+          <label>Source<input id="pSource"></label>
+          <label>Quote<input id="pQuote" type="number" min="0" step="0.01"></label>
+          <label>Status<select id="pStatus"><option>New</option><option>Contacted</option><option>Qualified</option><option>Converted</option><option>Lost</option></select></label>
+          <label>Follow-up Date<input id="pFollowUp" type="date"></label>
+          <label class="full">Notes<textarea id="pNotes" rows="3"></textarea></label>
+        </div>
+        <div id="prospectFormError" class="form-error"></div>
+        <div class="modal-actions"><button type="button" class="btn secondary-btn" id="prospectCancel">Cancel</button><button type="submit" class="btn primary-btn" id="prospectSave">Save Prospect</button></div>
+      </form>
+    </div>
+  </div>
+
 </div>
 <script>
   const API_URL = '/api/dashboard';
@@ -177,7 +216,7 @@
     const documents=rowsOf(data.documentsData);
 
     setTable('prospectsTable',prospects,r =>
-      '<tr><td><span class="mini-title">'+esc(r.Name)+'</span></td><td>'+esc(r.Business)+'</td><td>'+contact(r)+'</td><td>'+esc(r.Service)+'</td><td>'+esc(r.Source)+'</td><td>'+money(r.Quote)+'</td><td>'+statusBadge(r.Status)+'</td><td>'+esc(r['Follow-up Date'])+'</td></tr>',8,'prospectsMeta');
+      '<tr><td><span class="mini-title">'+esc(r.Name)+'</span></td><td>'+esc(r.Business)+'</td><td>'+contact(r)+'</td><td>'+esc(r.Service)+'</td><td>'+esc(r.Source)+'</td><td>'+money(r.Quote)+'</td><td>'+statusBadge(r.Status)+'</td><td>'+esc(r['Follow-up Date'])+'</td><td><button class="action-btn" type="button" data-prospect-edit="'+esc(r['Prospect ID'])+'">Edit</button><button class="action-btn" type="button" data-prospect-delete="'+esc(r['Prospect ID'])+'">Delete</button></td></tr>',10,'prospectsMeta');
 
     setTable('clientsTable',clients,r =>
       '<tr><td><span class="mini-title">'+esc(r.Name)+'</span></td><td>'+esc(r.Business)+'</td><td>'+contact(r)+'</td><td>'+esc(r.Service)+'</td><td>'+money(r['Contract Value'])+'</td><td>'+esc(r['Start Date'])+'</td><td>'+statusBadge(r.Status)+'</td></tr>',7,'clientsMeta');
@@ -208,6 +247,7 @@
   }
 
   function render(data){
+    window.__dashboardData=data;
     document.getElementById('leads').textContent = data.leads || 0;
     document.getElementById('clients').textContent = data.clients || 0;
     document.getElementById('revenue').textContent = money(data.revenue);
@@ -228,11 +268,80 @@
     ).join('') : '<tr><td colspan="6">No prospects found.</td></tr>';
 
     renderDataTables(data);
+    bindProspectActions();
     document.getElementById('updated').textContent = 'Last updated: ' + new Date().toLocaleTimeString('en-IN');
   }
 
   function esc(v){
     return String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+
+  async function mutateProspect(action, payload){
+    const response = await fetch('/api/mutate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({entity:'prospect',action,payload})});
+    const result = await response.json().catch(()=>({}));
+    if(!response.ok || result.ok === false) throw new Error(result.error || 'Unable to save prospect');
+    return result;
+  }
+  function isoToSheetDate(v){
+    if(!v) return '';
+    const p=String(v).split('-'); return p.length===3 ? p[2]+'/'+p[1]+'/'+p[0] : v;
+  }
+  function sheetToIsoDate(v){
+    const p=String(v||'').split('/');
+    return p.length===3 ? p[2]+'-'+p[1].padStart(2,'0')+'-'+p[0].padStart(2,'0') : '';
+  }
+  function openProspectModal(record){
+    document.getElementById('prospectModalTitle').textContent=record?'Edit Prospect':'Add Prospect';
+    document.getElementById('prospectId').value=record?.['Prospect ID']||'';
+    document.getElementById('pName').value=record?.Name||'';
+    document.getElementById('pBusiness').value=record?.Business||'';
+    document.getElementById('pPhone').value=record?.Phone||'';
+    document.getElementById('pEmail').value=record?.Email||'';
+    document.getElementById('pService').value=record?.Service||'';
+    document.getElementById('pSource').value=record?.Source||'';
+    document.getElementById('pQuote').value=record?.Quote||'';
+    document.getElementById('pStatus').value=record?.Status||'New';
+    document.getElementById('pFollowUp').value=sheetToIsoDate(record?.['Follow-up Date']);
+    document.getElementById('pNotes').value=record?.Notes||'';
+    document.getElementById('prospectFormError').style.display='none';
+    document.getElementById('prospectModal').classList.add('open');
+  }
+  function closeProspectModal(){document.getElementById('prospectModal').classList.remove('open')}
+  function currentProspects(){return rowsOf(window.__dashboardData?.prospectsData)}
+  async function saveProspect(e){
+    e.preventDefault();
+    const btn=document.getElementById('prospectSave'), err=document.getElementById('prospectFormError');
+    btn.disabled=true; btn.textContent='Saving...'; err.style.display='none';
+    const payload={
+      prospectId:document.getElementById('prospectId').value.trim(),
+      name:document.getElementById('pName').value.trim(),
+      business:document.getElementById('pBusiness').value.trim(),
+      phone:document.getElementById('pPhone').value.trim(),
+      email:document.getElementById('pEmail').value.trim(),
+      service:document.getElementById('pService').value.trim(),
+      source:document.getElementById('pSource').value.trim(),
+      quote:document.getElementById('pQuote').value.trim(),
+      status:document.getElementById('pStatus').value,
+      followUpDate:isoToSheetDate(document.getElementById('pFollowUp').value),
+      notes:document.getElementById('pNotes').value.trim()
+    };
+    try{
+      await mutateProspect(payload.prospectId?'update':'create',payload);
+      closeProspectModal(); await refreshDashboard();
+    }catch(e){err.textContent=e.message;err.style.display='block'}
+    finally{btn.disabled=false;btn.textContent='Save Prospect'}
+  }
+  function bindProspectActions(){
+    document.querySelectorAll('[data-prospect-edit]').forEach(b=>b.onclick=()=>{
+      const r=currentProspects().find(x=>String(x['Prospect ID'])===String(b.dataset.prospectEdit)); if(r) openProspectModal(r);
+    });
+    document.querySelectorAll('[data-prospect-delete]').forEach(b=>b.onclick=async()=>{
+      const r=currentProspects().find(x=>String(x['Prospect ID'])===String(b.dataset.prospectDelete));
+      if(!r || !confirm('Delete prospect '+(r.Name||r['Prospect ID'])+'? This removes the row from Google Sheets.')) return;
+      b.disabled=true;
+      try{await mutateProspect('delete',{prospectId:r['Prospect ID']});await refreshDashboard()}catch(e){alert(e.message)}finally{b.disabled=false}
+    });
   }
 
   let hasRenderedData = false;
@@ -291,6 +400,13 @@
     }
   }
 
+
+
+  document.getElementById('addProspectBtn').addEventListener('click',()=>openProspectModal());
+  document.getElementById('prospectModalClose').addEventListener('click',closeProspectModal);
+  document.getElementById('prospectCancel').addEventListener('click',closeProspectModal);
+  document.getElementById('prospectForm').addEventListener('submit',saveProspect);
+  document.getElementById('prospectModal').addEventListener('click',e=>{if(e.target.id==='prospectModal')closeProspectModal()});
 
   document.querySelectorAll('#dataNav button').forEach(function(button){
     button.addEventListener('click',function(){
