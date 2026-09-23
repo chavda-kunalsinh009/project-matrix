@@ -30,7 +30,7 @@
     .notes{padding:20px;border-left:5px solid #4f46e5;min-height:70px;color:#4b5563}
     .system{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;padding:18px}.sys{background:#f8fafc;border:1px solid #e9eef5;border-radius:12px;padding:16px}.sys b{display:block;font-size:22px;margin-top:5px}
     footer{text-align:center;padding:18px;color:#8490a3;font-size:12px}
-    #loading{position:fixed;inset:0;background:rgba(245,248,252,.9);display:flex;align-items:center;justify-content:center;z-index:10;font-weight:650}
+    #loading{position:fixed;inset:0;background:rgba(245,248,252,.9);display:none;align-items:center;justify-content:center;z-index:10;font-weight:650}
     #error{display:none;background:#fff1f2;color:#9f1239;border:1px solid #fecdd3;padding:14px 16px;border-radius:12px;margin-bottom:18px}
     @media(max-width:900px){.grid{grid-template-columns:repeat(2,1fr)}.secondary{grid-template-columns:1fr}.system{grid-template-columns:1fr}}
     @media(max-width:600px){header{padding:20px}.header-inner{align-items:flex-start;flex-direction:column}main{padding:20px}.grid{grid-template-columns:1fr}.value{font-size:27px}.title-row{align-items:flex-start;flex-direction:column;gap:6px}}
@@ -69,6 +69,8 @@
 </div>
 <script>
   const API_URL = '/api/dashboard';
+  const CACHE_KEY = 'projectMatrixDashboard';
+  const REFRESH_MS = 30000;
 
   const money = n => '₹' + Number(n || 0).toLocaleString('en-IN',{maximumFractionDigits:2});
   const pct = n => Number(n || 0).toFixed(1) + '%';
@@ -104,7 +106,7 @@
 
   function loadCachedDashboard(){
     try{
-      const cached = localStorage.getItem('projectMatrixDashboard');
+      const cached = localStorage.getItem(CACHE_KEY);
       if(!cached) return false;
       const data = JSON.parse(cached);
       if(!data || typeof data !== 'object') return false;
@@ -112,36 +114,57 @@
       hasRenderedData = true;
       return true;
     }catch(e){
-      localStorage.removeItem('projectMatrixDashboard');
+      localStorage.removeItem(CACHE_KEY);
       return false;
     }
   }
 
   async function refreshDashboard(){
     const error = document.getElementById('error');
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+
     try{
-      const response = await fetch(API_URL, {cache:'no-store'});
+      const response = await fetch(API_URL, {
+        method:'GET',
+        cache:'no-store',
+        signal:controller.signal
+      });
+
       if(!response.ok) throw new Error('Dashboard API request failed (' + response.status + ')');
+
       const data = await response.json();
+
+      // Google Sheets remains the source of truth. Every successful refresh
+      // replaces the browser snapshot with the newest Sheet data.
       render(data);
       hasRenderedData = true;
-      try{ localStorage.setItem('projectMatrixDashboard', JSON.stringify(data)); }catch(e){}
+      try{ localStorage.setItem(CACHE_KEY, JSON.stringify(data)); }catch(e){}
       error.style.display='none';
     }catch(e){
       console.error('Project Matrix refresh failed:', e);
+
+      // Never hide the dashboard because the background sync is slow.
+      // Cached/current data remains visible until the next successful sync.
       if(!hasRenderedData){
-        error.textContent = 'Project Matrix Error: ' + e.message;
+        error.textContent = e.name === 'AbortError'
+          ? 'Live data is taking longer than expected. The dashboard will keep trying automatically.'
+          : 'Project Matrix Error: ' + e.message;
         error.style.display='block';
       }
     }finally{
+      clearTimeout(timeout);
       document.getElementById('loading').style.display='none';
     }
   }
 
-  // Render the last successful snapshot immediately, then sync fresh data.
+  // Show the dashboard immediately. If cached data exists, display it now.
+  // Fresh Google Sheets data is fetched in the background and replaces it
+  // automatically when available.
   loadCachedDashboard();
+  document.getElementById('loading').style.display='none';
   refreshDashboard();
-  setInterval(refreshDashboard,30000);
+  setInterval(refreshDashboard, REFRESH_MS);
 </script>
 </body>
 </html>
