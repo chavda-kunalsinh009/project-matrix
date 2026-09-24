@@ -141,7 +141,8 @@
 
   <div class="section data-section" id="tasksSection">
     <div class="section-head">Tasks <span class="section-meta" id="tasksMeta">0 records</span></div>
-    <div class="table-wrap"><table class="table"><thead><tr><th>Task</th><th>Project</th><th>Client</th><th>Assigned To</th><th>Priority</th><th>Deadline</th><th>Status</th><th>Progress</th></tr></thead><tbody id="tasksTable"></tbody></table></div>
+    <div class="project-toolbar"><span class="admin-state" id="taskPermissionState">Add / Edit / Assign / Progress / Status / Deadline available to users · Delete requires Admin Mode</span><button class="btn primary-btn" id="addTaskBtn" type="button">+ Add Task</button></div>
+    <div class="table-wrap"><table class="table"><thead><tr><th>Task</th><th>Project</th><th>Client</th><th>Assigned To</th><th>Priority</th><th>Deadline</th><th>Status</th><th>Progress</th><th>Actions</th></tr></thead><tbody id="tasksTable"></tbody></table></div>
   </div>
 
   <div class="section data-section" id="teamSection">
@@ -208,6 +209,27 @@
         </div>
         <div id="projectFormError" class="form-error"></div>
         <div class="modal-actions"><button type="button" class="btn secondary-btn" id="projectCancel">Cancel</button><button type="submit" class="btn primary-btn" id="projectSave">Save Project</button></div>
+      </form>
+    </div>
+  </div>
+
+  <div id="taskModal" class="modal-backdrop" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-head"><div><h3 id="taskModalTitle">Add Task</h3><div class="muted">Changes are saved to Google Sheets.</div></div><button class="modal-close" id="taskModalClose" type="button">×</button></div>
+      <form id="taskForm">
+        <input type="hidden" id="taskId">
+        <div class="form-grid">
+          <label>Project<select id="tkProject" required></select></label>
+          <label>Task Name<input id="tkName" required></label>
+          <label>Assigned To<select id="tkAssigned"></select></label>
+          <label>Priority<select id="tkPriority"><option>Low</option><option selected>Medium</option><option>High</option><option>Urgent</option></select></label>
+          <label>Deadline<input id="tkDeadline" type="date"></label>
+          <label>Status<select id="tkStatus"><option>Not Started</option><option>Planning</option><option>In Progress</option><option>On Hold</option><option>Completed</option><option>Cancelled</option></select></label>
+          <label>Progress<input id="tkProgress" type="number" min="0" max="100" step="1" value="0"></label>
+          <label class="full">Notes<textarea id="tkNotes" rows="3"></textarea></label>
+        </div>
+        <div id="taskFormError" class="form-error"></div>
+        <div class="modal-actions"><button type="button" class="btn secondary-btn" id="taskCancel">Cancel</button><button type="submit" class="btn primary-btn" id="taskSave">Save Task</button></div>
       </form>
     </div>
   </div>
@@ -289,7 +311,7 @@
       '<tr><td><span class="mini-title">'+esc(r['Project Name'])+'</span><span class="subtext">'+esc(r['Project ID'])+'</span></td><td>'+esc(r.clientBusiness || r.clientName || r['Client ID'])+'</td><td>'+esc(r.Service)+'</td><td>'+esc(formatDateOnly(r['Start Date']))+'</td><td>'+esc(formatDateOnly(r.Deadline))+'</td><td>'+statusBadge(r.Status)+'</td><td>'+statusBadge(r.Priority)+'</td><td>'+esc(r.Manager)+'</td><td class="project-actions">'+(isAdminMode ? '<button class="action-btn" type="button" data-project-edit="'+esc(r['Project ID'])+'">Edit</button><button class="action-btn" type="button" data-project-delete="'+esc(r['Project ID'])+'">Delete</button>' : '<span class="muted">View only</span>')+'</td></tr>',9,'projectsMeta');
 
     setTable('tasksTable',tasks,r =>
-      '<tr><td><span class="mini-title">'+esc(r['Task Name'])+'</span><span class="subtext">'+esc(r['Task ID'])+'</span></td><td>'+esc(r.projectName)+'</td><td>'+esc(r.clientName)+'</td><td>'+esc(r.assignedToName)+'</td><td>'+statusBadge(r.Priority)+'</td><td>'+esc(formatDateOnly(r.Deadline))+'</td><td>'+statusBadge(r.Status)+'</td><td>'+esc(r.Progress)+'%</td></tr>',8,'tasksMeta');
+      '<tr><td><span class="mini-title">'+esc(r['Task Name'])+'</span><span class="subtext">'+esc(r['Task ID'])+'</span></td><td>'+esc(r.projectName || r['Project ID'])+'</td><td>'+esc(r.clientName || r['Client ID'])+'</td><td>'+esc(r.assignedToName || r['Assigned To'] || r['Assigned To ID'])+'</td><td>'+statusBadge(r.Priority)+'</td><td>'+esc(formatDateOnly(r.Deadline))+'</td><td>'+statusBadge(r.Status)+'</td><td>'+esc(r.Progress ?? 0)+'%</td><td class="project-actions">'+(isAdminMode ? '<button class="action-btn" type="button" data-task-edit="'+esc(r['Task ID'])+'">Edit</button><button class="action-btn" type="button" data-task-delete="'+esc(r['Task ID'])+'">Delete</button>' : '<button class="action-btn" type="button" data-task-edit="'+esc(r['Task ID'])+'">Edit</button>')+'</td></tr>',9,'tasksMeta');
 
     setTable('teamTable',team,r =>
       '<tr><td><span class="mini-title">'+esc(r.Name)+'</span></td><td>'+esc(r.Role)+'</td><td>'+contact(r)+'</td><td>'+esc(formatDateOnly(r['Joining Date']))+'</td><td>'+statusBadge(r.Status)+'</td></tr>',5,'teamMeta');
@@ -349,6 +371,7 @@
     renderDataTables(data);
     bindProspectActions();
     bindProjectActions();
+    bindTaskActions();
     document.getElementById('updated').textContent = 'Last updated: ' + new Date().toLocaleTimeString('en-IN');
   }
 
@@ -454,7 +477,7 @@
       b.disabled=true;
       try{await mutateProject('delete',{projectId:r['Project ID']});await refreshDashboard()}catch(e){alert(e.message)}finally{b.disabled=false}
     });
-  }
+  }\n\n  let currentTasks = [];\n  function currentTaskRows(){\n    const source=window.__dashboardData?.data||{};\n    return Array.isArray(source.tasks)?source.tasks:[];\n  }\n  function taskTeamRows(){\n    const source=window.__dashboardData?.data||{};\n    return Array.isArray(source.team)?source.team:[];\n  }\n  function taskProjectRows(){\n    const source=window.__dashboardData?.data||{};\n    return Array.isArray(source.projects)?source.projects:[];\n  }\n  function populateTaskOptions(selectedProject='',selectedAssigned=''){\n    const ps=document.getElementById('tkProject'), as=document.getElementById('tkAssigned');\n    const projects=taskProjectRows(), team=taskTeamRows();\n    ps.innerHTML='<option value="">Select project</option>'+projects.map(r=>{\n      const id=r['Project ID']||r.id||r.ID||''; const name=r['Project Name']||r.name||id;\n      return id?'<option value="'+esc(id)+'">'+esc(name)+' ('+esc(id)+')</option>':'';\n    }).join('');\n    ps.value=selectedProject||'';\n    as.innerHTML='<option value="">Unassigned</option>'+team.map(r=>{\n      const id=r['Team ID']||r.TeamID||r['Team Member ID']||r.TeamMemberID||r['Member ID']||r.MemberID||r.id||r.ID||'';\n      const name=r.Name||r['Team Name']||r['Member Name']||r.name||id;\n      return id?'<option value="'+esc(id)+'">'+esc(name)+'</option>':'';\n    }).join('');\n    as.value=selectedAssigned||'';\n  }\n  function openTaskModal(record){\n    document.getElementById('taskModalTitle').textContent=record?'Edit Task':'Add Task';\n    document.getElementById('taskId').value=record?.['Task ID']||'';\n    populateTaskOptions(record?.['Project ID']||'',record?.['Assigned To ID']||record?.['Assigned To']||'');\n    document.getElementById('tkName').value=record?.['Task Name']||'';\n    document.getElementById('tkPriority').value=record?.Priority||'Medium';\n    document.getElementById('tkDeadline').value=isoInputDate(record?.Deadline);\n    document.getElementById('tkStatus').value=record?.Status||'Not Started';\n    document.getElementById('tkProgress').value=Number(record?.Progress||0);\n    document.getElementById('tkNotes').value=record?.Notes||'';\n    document.getElementById('taskFormError').style.display='none';\n    document.getElementById('taskModal').classList.add('open');\n  }\n  function closeTaskModal(){document.getElementById('taskModal').classList.remove('open')}\n  async function mutateTask(action,payload){\n    if(action==='delete' && !isAdminMode) throw new Error('Admin Mode is required to delete tasks.');\n    const adminToken=localStorage.getItem(ADMIN_TOKEN_KEY)||'';\n    const response=await fetch('/api/mutate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({entity:'task',action,payload,adminToken})});\n    const result=await response.json().catch(()=>({}));\n    if(!response.ok||result.ok===false) throw new Error(result.error||'Unable to save task');\n    return result;\n  }\n  async function saveTask(e){\n    e.preventDefault();\n    const btn=document.getElementById('taskSave'),err=document.getElementById('taskFormError');\n    btn.disabled=true;btn.textContent='Saving...';err.style.display='none';\n    const editing=Boolean(document.getElementById('taskId').value.trim());\n    const progress=Math.max(0,Math.min(100,Number(document.getElementById('tkProgress').value||0)));\n    const payload={\n      taskId:editing?document.getElementById('taskId').value.trim():'',\n      projectId:document.getElementById('tkProject').value.trim(),\n      taskName:document.getElementById('tkName').value.trim(),\n      assignedTo:document.getElementById('tkAssigned').value.trim(),\n      priority:document.getElementById('tkPriority').value,\n      deadline:document.getElementById('tkDeadline').value,\n      status:document.getElementById('tkStatus').value,\n      progress,\n      notes:document.getElementById('tkNotes').value.trim()\n    };\n    try{await mutateTask(editing?'update':'create',payload);closeTaskModal();await refreshDashboard()}catch(e){err.textContent=e.message;err.style.display='block'}finally{btn.disabled=false;btn.textContent='Save Task'}\n  }\n  function bindTaskActions(){\n    document.querySelectorAll('[data-task-edit]').forEach(b=>b.onclick=()=>{\n      const r=currentTaskRows().find(x=>String(x['Task ID'])===String(b.dataset.taskEdit));\n      if(r) openTaskModal(r);\n    });\n    document.querySelectorAll('[data-task-delete]').forEach(b=>b.onclick=async()=>{\n      if(!isAdminMode){alert('Enable Admin Mode to delete tasks.');return;}\n      const r=currentTaskRows().find(x=>String(x['Task ID'])===String(b.dataset.taskDelete));\n      if(!r||!confirm('Delete task '+(r['Task Name']||r['Task ID'])+'? This removes the row from Google Sheets.')) return;\n      b.disabled=true;try{await mutateTask('delete',{taskId:r['Task ID']});await refreshDashboard()}catch(e){alert(e.message)}finally{b.disabled=false}\n    });\n  }\n
 
   async function mutateProspect(action, payload){
     if((action==='update' || action==='delete') && !isAdminMode){
@@ -692,6 +715,7 @@
     isAdminMode=false;
     closeProspectModal();
     closeProjectModal();
+    closeTaskModal();
     updateAdminUI();
     renderDataTables(window.__dashboardData || {});
   }
@@ -734,6 +758,11 @@
   document.getElementById('projectCancel').addEventListener('click',closeProjectModal);
   document.getElementById('projectForm').addEventListener('submit',saveProject);
   document.getElementById('projectModal').addEventListener('click',e=>{if(e.target.id==='projectModal')closeProjectModal()});
+  document.getElementById('addTaskBtn').addEventListener('click',()=>openTaskModal());
+  document.getElementById('taskModalClose').addEventListener('click',closeTaskModal);
+  document.getElementById('taskCancel').addEventListener('click',closeTaskModal);
+  document.getElementById('taskForm').addEventListener('submit',saveTask);
+  document.getElementById('taskModal').addEventListener('click',e=>{if(e.target.id==='taskModal')closeTaskModal()});
   document.getElementById('prospectModalClose').addEventListener('click',closeProspectModal);
   document.getElementById('prospectCancel').addEventListener('click',closeProspectModal);
   document.getElementById('prospectForm').addEventListener('submit',saveProspect);
