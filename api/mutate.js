@@ -1,4 +1,4 @@
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzIU_K6LJczgEuU5dFS4FV5WEvVLBipTop0Gu__KfytMXN8z8nbXXbRAPpb3d_ESPDT/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby5egfDXJwDuwcGOYLEsKdZImrl8y3nTHIVgafnJeIvYYMqIE9FUOm6mBer3pdyIkLG/exec';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -11,8 +11,6 @@ export default async function handler(req, res) {
   try {
     const body = req.body || {};
 
-    // Add the private server-to-server secret.
-    // This value comes from Vercel Environment Variables.
     const payload = {
       ...body,
       serverSecret: process.env.APPS_SCRIPT_MUTATION_SECRET
@@ -30,7 +28,6 @@ export default async function handler(req, res) {
     const text = await response.text();
 
     let data;
-
     try {
       data = JSON.parse(text);
     } catch {
@@ -45,7 +42,6 @@ export default async function handler(req, res) {
     }
 
     return res.status(200).json(data);
-
   } catch (error) {
     console.error('Mutation proxy error:', error);
 
