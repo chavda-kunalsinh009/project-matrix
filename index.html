@@ -154,7 +154,8 @@
 
   <div class="section data-section admin-only" id="invoicesSection">
     <div class="section-head">Invoices <span class="section-meta" id="invoicesMeta">0 records</span></div>
-    <div class="table-wrap"><table class="table"><thead><tr><th>Invoice</th><th>Client</th><th>Project</th><th>Invoice Date</th><th>Due Date</th><th>Amount</th><th>Paid</th><th>Balance</th><th>Status</th></tr></thead><tbody id="invoicesTable"></tbody></table></div>
+    <div class="project-toolbar"><span class="admin-state" id="invoicePermissionState">Admin access · Full invoice control</span><button class="btn primary-btn" id="addInvoiceBtn" type="button">+ Add Invoice</button></div>
+    <div class="table-wrap"><table class="table"><thead><tr><th>Invoice</th><th>Client</th><th>Project</th><th>Invoice Date</th><th>Due Date</th><th>Amount</th><th>Paid</th><th>Balance</th><th>Status</th><th>Actions</th></tr></thead><tbody id="invoicesTable"></tbody></table></div>
   </div>
 
   <div class="section data-section admin-only" id="paymentsSection">
@@ -278,6 +279,27 @@
     </div>
   </div>
 
+  <div id="invoiceModal" class="modal-backdrop" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-head"><div><h3 id="invoiceModalTitle">Add Invoice</h3><div class="muted">Changes are saved to Google Sheets.</div></div><button class="modal-close" id="invoiceModalClose" type="button">×</button></div>
+      <form id="invoiceForm">
+        <input type="hidden" id="invoiceId">
+        <div class="form-grid">
+          <label>Client<select id="invClientId" required></select></label>
+          <label>Project<select id="invProjectId"></select></label>
+          <label>Invoice Date<input id="invInvoiceDate" type="date" required></label>
+          <label>Due Date<input id="invDueDate" type="date" required></label>
+          <label>Amount<input id="invAmount" type="number" min="0" step="0.01" required></label>
+          <label>Paid Amount<input id="invPaidAmount" type="number" min="0" step="0.01" value="0"></label>
+          <label>Status<select id="invStatus"><option>Pending</option><option>Partially Paid</option><option>Paid</option><option>Overdue</option><option>Cancelled</option></select></label>
+          <label class="full">Notes<textarea id="invNotes" rows="3"></textarea></label>
+        </div>
+        <div id="invoiceFormError" class="form-error"></div>
+        <div class="modal-actions"><button type="button" class="btn secondary-btn" id="invoiceCancel">Cancel</button><button type="submit" class="btn primary-btn" id="invoiceSave">Save Invoice</button></div>
+      </form>
+    </div>
+  </div>
+
   <div id="prospectModal" class="modal-backdrop" aria-hidden="true">
     <div class="modal-card">
       <div class="modal-head"><div><h3 id="prospectModalTitle">Add Prospect</h3><div class="muted">Changes are saved to Google Sheets.</div></div><button class="modal-close" id="prospectModalClose" type="button">×</button></div>
@@ -365,7 +387,7 @@
     },6,'teamMeta');
 
     setTable('invoicesTable',invoices,r =>
-      '<tr><td><span class="mini-title">'+esc(r['Invoice ID'])+'</span></td><td>'+esc(r.clientName)+'</td><td>'+esc(r.projectName)+'</td><td>'+esc(formatDateOnly(r['Invoice Date']))+'</td><td>'+esc(formatDateOnly(r['Due Date']))+'</td><td>'+money(r.Amount)+'</td><td>'+money(r['Paid Amount'])+'</td><td>'+money(r.Balance)+'</td><td>'+statusBadge(r.Status)+'</td></tr>',9,'invoicesMeta');
+      '<tr><td><span class="mini-title">'+esc(r['Invoice ID'])+'</span></td><td>'+esc(r.clientName||r['Client ID'])+'</td><td>'+esc(r.projectName||r['Project ID'])+'</td><td>'+esc(formatDateOnly(r['Invoice Date']))+'</td><td>'+esc(formatDateOnly(r['Due Date']))+'</td><td>'+money(r.Amount)+'</td><td>'+money(r['Paid Amount'])+'</td><td>'+money(Number(r.Amount||0)-Number(r['Paid Amount']||0))+'</td><td>'+statusBadge(r.Status)+'</td><td class="project-actions"><button class="action-btn" type="button" data-invoice-edit="'+esc(r['Invoice ID'])+'">Edit</button><button class="action-btn" type="button" data-invoice-delete="'+esc(r['Invoice ID'])+'">Delete</button></td></tr>',10,'invoicesMeta');
 
     setTable('paymentsTable',payments,r =>
       '<tr><td><span class="mini-title">'+esc(r['Payment ID'])+'</span></td><td>'+esc(r.clientName)+'</td><td>'+esc(r.projectName)+'</td><td>'+esc(r.invoiceName || r['Invoice ID'])+'</td><td>'+esc(formatDateOnly(r['Payment Date']))+'</td><td>'+money(r.Amount)+'</td><td>'+esc(r['Payment Method'])+'</td><td>'+statusBadge(r.Status)+'</td></tr>',8,'paymentsMeta');
@@ -420,6 +442,7 @@
     bindProspectActions();
     bindProjectActions();
     bindTaskActions();
+    bindInvoiceActions();
     document.getElementById('updated').textContent = 'Last updated: ' + new Date().toLocaleTimeString('en-IN');
   }
 
@@ -609,6 +632,63 @@
     });
   }
 
+
+  function currentInvoiceRows(){
+    const source=window.__dashboardData?.data||{};
+    return Array.isArray(source.invoices) ? source.invoices : rowsOf(window.__dashboardData?.invoicesData);
+  }
+  function invoiceId(r){ return r?.['Invoice ID']||r?.id||r?.ID||''; }
+  function populateInvoiceOptions(){
+    const source=window.__dashboardData?.data||{};
+    const clients=Array.isArray(source.clients)?source.clients:[];
+    const projects=Array.isArray(source.projects)?source.projects:[];
+    const cs=document.getElementById('invClientId'), ps=document.getElementById('invProjectId');
+    const cv=cs.value,pv=ps.value;
+    cs.innerHTML='<option value="">Select client</option>'+clients.map(r=>{const id=clientId(r);return '<option value="'+esc(id)+'">'+esc(r.Name||r.Business||id)+'</option>'}).join('');
+    ps.innerHTML='<option value="">Select project</option>'+projects.map(r=>{const id=r['Project ID']||r.id||'';return '<option value="'+esc(id)+'">'+esc(r['Project Name']||id)+'</option>'}).join('');
+    cs.value=cv; ps.value=pv;
+  }
+  function openInvoiceModal(record){
+    if(!isAdminMode){alert('Enable Admin Mode to manage invoices.');return;}
+    populateInvoiceOptions();
+    document.getElementById('invoiceModalTitle').textContent=record?'Edit Invoice':'Add Invoice';
+    document.getElementById('invoiceId').value=invoiceId(record)||'';
+    document.getElementById('invClientId').value=record?.['Client ID']||'';
+    document.getElementById('invProjectId').value=record?.['Project ID']||'';
+    document.getElementById('invInvoiceDate').value=isoInputDate(record?.['Invoice Date']);
+    document.getElementById('invDueDate').value=isoInputDate(record?.['Due Date']);
+    document.getElementById('invAmount').value=record?.Amount??'';
+    document.getElementById('invPaidAmount').value=record?.['Paid Amount']??0;
+    document.getElementById('invStatus').value=record?.Status||'Pending';
+    document.getElementById('invNotes').value=record?.Notes||'';
+    document.getElementById('invoiceFormError').style.display='none';
+    document.getElementById('invoiceModal').classList.add('open');
+  }
+  function closeInvoiceModal(){document.getElementById('invoiceModal').classList.remove('open')}
+  async function mutateInvoice(action,payload){
+    if(!isAdminMode) throw new Error('Admin Mode is required for invoice changes.');
+    const adminToken=localStorage.getItem(ADMIN_TOKEN_KEY)||'';
+    const response=await fetch('/api/mutate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({entity:'invoice',action,payload,adminToken})});
+    const result=await response.json().catch(()=>({}));
+    if(!response.ok||result.ok===false) throw new Error(result.error||'Unable to save invoice');
+    return result;
+  }
+  async function saveInvoice(e){
+    e.preventDefault(); if(!isAdminMode)return;
+    const btn=document.getElementById('invoiceSave'),err=document.getElementById('invoiceFormError');
+    btn.disabled=true;btn.textContent='Saving...';err.style.display='none';
+    const editing=Boolean(document.getElementById('invoiceId').value.trim());
+    const amount=Number(document.getElementById('invAmount').value||0), paidAmount=Number(document.getElementById('invPaidAmount').value||0);
+    const invoiceDate=document.getElementById('invInvoiceDate').value,dueDate=document.getElementById('invDueDate').value;
+    if(paidAmount>amount){err.textContent='Paid Amount cannot exceed Amount.';err.style.display='block';btn.disabled=false;btn.textContent='Save Invoice';return;}
+    if(invoiceDate&&dueDate&&dueDate<invoiceDate){err.textContent='Due Date cannot be before Invoice Date.';err.style.display='block';btn.disabled=false;btn.textContent='Save Invoice';return;}
+    const payload={invoiceId:editing?document.getElementById('invoiceId').value.trim():'',clientId:document.getElementById('invClientId').value,projectId:document.getElementById('invProjectId').value,invoiceDate,dueDate,amount,paidAmount,balance:Math.max(0,amount-paidAmount),status:document.getElementById('invStatus').value,notes:document.getElementById('invNotes').value.trim()};
+    try{await mutateInvoice(editing?'update':'create',payload);closeInvoiceModal();await refreshDashboard()}catch(e){err.textContent=e.message;err.style.display='block'}finally{btn.disabled=false;btn.textContent='Save Invoice'}
+  }
+  function bindInvoiceActions(){
+    document.querySelectorAll('[data-invoice-edit]').forEach(b=>b.onclick=()=>{const r=currentInvoiceRows().find(x=>String(invoiceId(x))===String(b.dataset.invoiceEdit));if(r)openInvoiceModal(r)});
+    document.querySelectorAll('[data-invoice-delete]').forEach(b=>b.onclick=async()=>{if(!isAdminMode)return;const r=currentInvoiceRows().find(x=>String(invoiceId(x))===String(b.dataset.invoiceDelete));if(!r||!confirm('Delete invoice '+invoiceId(r)+'? This removes the row from Google Sheets.'))return;b.disabled=true;try{await mutateInvoice('delete',{invoiceId:b.dataset.invoiceDelete});await refreshDashboard()}catch(e){alert(e.message)}finally{b.disabled=false}});
+  }
 
   function currentClientRows(){
     const source=window.__dashboardData?.data||{};
@@ -1034,6 +1114,12 @@
   document.getElementById('teamCancel').addEventListener('click',closeTeamModal);
   document.getElementById('teamModal').addEventListener('click',e=>{if(e.target.id==='teamModal')closeTeamModal()});
   document.getElementById('clientForm').addEventListener('submit',saveClient);
+  document.getElementById('addInvoiceBtn').addEventListener('click',()=>openInvoiceModal());
+  document.getElementById('invoiceModalClose').addEventListener('click',closeInvoiceModal);
+  document.getElementById('invoiceCancel').addEventListener('click',closeInvoiceModal);
+  document.getElementById('invoiceForm').addEventListener('submit',saveInvoice);
+  document.getElementById('invoiceModal').addEventListener('click',e=>{if(e.target.id==='invoiceModal')closeInvoiceModal()});
+
   document.getElementById('addClientBtn').addEventListener('click',()=>openClientModal());
   document.getElementById('clientModalClose').addEventListener('click',closeClientModal);
   document.getElementById('clientCancel').addEventListener('click',closeClientModal);
