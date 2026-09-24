@@ -147,7 +147,8 @@
 
   <div class="section data-section" id="teamSection">
     <div class="section-head">Team <span class="section-meta" id="teamMeta">0 records</span></div>
-    <div class="table-wrap"><table class="table"><thead><tr><th>Name</th><th>Role</th><th>Contact</th><th>Joining Date</th><th>Status</th></tr></thead><tbody id="teamTable"></tbody></table></div>
+    <div class="project-toolbar"><span class="admin-state" id="teamPermissionState">Add / View / Edit available to users · Delete requires Admin Mode</span><button class="btn primary-btn" id="addTeamBtn" type="button">+ Add Team Member</button></div>
+    <div class="table-wrap"><table class="table"><thead><tr><th>Name</th><th>Role</th><th>Contact</th><th>Joining Date</th><th>Status</th><th>Actions</th></tr></thead><tbody id="teamTable"></tbody></table></div>
   </div>
 
   <div class="section data-section admin-only" id="invoicesSection">
@@ -234,6 +235,25 @@
     </div>
   </div>
 
+  <div id="teamModal" class="modal-backdrop" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-head"><div><h3 id="teamModalTitle">Add Team Member</h3><div class="muted">Changes are saved to Google Sheets.</div></div><button class="modal-close" id="teamModalClose" type="button">×</button></div>
+      <form id="teamForm">
+        <input type="hidden" id="teamMemberId">
+        <div class="form-grid">
+          <label>Name<input id="tmName" required></label>
+          <label>Role<input id="tmRole" required></label>
+          <label>Phone<input id="tmPhone"></label>
+          <label>Email<input id="tmEmail" type="email"></label>
+          <label>Joining Date<input id="tmJoiningDate" type="date"></label>
+          <label>Status<select id="tmStatus"><option>Active</option><option>Inactive</option><option>On Leave</option></select></label>
+        </div>
+        <div id="teamFormError" class="form-error"></div>
+        <div class="modal-actions"><button type="button" class="btn secondary-btn" id="teamCancel">Cancel</button><button type="submit" class="btn primary-btn" id="teamSave">Save Team Member</button></div>
+      </form>
+    </div>
+  </div>
+
   <div id="prospectModal" class="modal-backdrop" aria-hidden="true">
     <div class="modal-card">
       <div class="modal-head"><div><h3 id="prospectModalTitle">Add Prospect</h3><div class="muted">Changes are saved to Google Sheets.</div></div><button class="modal-close" id="prospectModalClose" type="button">×</button></div>
@@ -313,8 +333,10 @@
     setTable('tasksTable',tasks,r =>
       '<tr><td><span class="mini-title">'+esc(r['Task Name'])+'</span><span class="subtext">'+esc(r['Task ID'])+'</span></td><td>'+esc(r.projectName || r['Project ID'])+'</td><td>'+esc(r.clientName || r['Client ID'])+'</td><td>'+esc(r.assignedToName || r['Assigned To'] || r['Assigned To ID'])+'</td><td>'+statusBadge(r.Priority)+'</td><td>'+esc(formatDateOnly(r.Deadline))+'</td><td>'+statusBadge(r.Status)+'</td><td>'+esc(r.Progress ?? 0)+'%</td><td class="project-actions">'+(isAdminMode ? '<button class="action-btn" type="button" data-task-edit="'+esc(r['Task ID'])+'">Edit</button><button class="action-btn" type="button" data-task-delete="'+esc(r['Task ID'])+'">Delete</button>' : '<button class="action-btn" type="button" data-task-edit="'+esc(r['Task ID'])+'">Edit</button>')+'</td></tr>',9,'tasksMeta');
 
-    setTable('teamTable',team,r =>
-      '<tr><td><span class="mini-title">'+esc(r.Name)+'</span></td><td>'+esc(r.Role)+'</td><td>'+contact(r)+'</td><td>'+esc(formatDateOnly(r['Joining Date']))+'</td><td>'+statusBadge(r.Status)+'</td></tr>',5,'teamMeta');
+    setTable('teamTable',team,r => {
+      const id=teamMemberId(r);
+      return '<tr><td><span class="mini-title">'+esc(r.Name)+'</span><span class="subtext">'+esc(id)+'</span></td><td>'+esc(r.Role)+'</td><td>'+contact(r)+'</td><td>'+esc(formatDateOnly(r['Joining Date']))+'</td><td>'+statusBadge(r.Status)+'</td><td class="project-actions"><button class="action-btn" type="button" data-team-edit="'+esc(id)+'">Edit</button>'+(isAdminMode ? '<button class="action-btn" type="button" data-team-delete="'+esc(id)+'">Delete</button>' : '')+'</td></tr>';
+    },6,'teamMeta');
 
     setTable('invoicesTable',invoices,r =>
       '<tr><td><span class="mini-title">'+esc(r['Invoice ID'])+'</span></td><td>'+esc(r.clientName)+'</td><td>'+esc(r.projectName)+'</td><td>'+esc(formatDateOnly(r['Invoice Date']))+'</td><td>'+esc(formatDateOnly(r['Due Date']))+'</td><td>'+money(r.Amount)+'</td><td>'+money(r['Paid Amount'])+'</td><td>'+money(r.Balance)+'</td><td>'+statusBadge(r.Status)+'</td></tr>',9,'invoicesMeta');
@@ -477,7 +499,148 @@
       b.disabled=true;
       try{await mutateProject('delete',{projectId:r['Project ID']});await refreshDashboard()}catch(e){alert(e.message)}finally{b.disabled=false}
     });
-  }\n\n  let currentTasks = [];\n  function currentTaskRows(){\n    const source=window.__dashboardData?.data||{};\n    return Array.isArray(source.tasks)?source.tasks:[];\n  }\n  function taskTeamRows(){\n    const source=window.__dashboardData?.data||{};\n    return Array.isArray(source.team)?source.team:[];\n  }\n  function taskProjectRows(){\n    const source=window.__dashboardData?.data||{};\n    return Array.isArray(source.projects)?source.projects:[];\n  }\n  function populateTaskOptions(selectedProject='',selectedAssigned=''){\n    const ps=document.getElementById('tkProject'), as=document.getElementById('tkAssigned');\n    const projects=taskProjectRows(), team=taskTeamRows();\n    ps.innerHTML='<option value="">Select project</option>'+projects.map(r=>{\n      const id=r['Project ID']||r.id||r.ID||''; const name=r['Project Name']||r.name||id;\n      return id?'<option value="'+esc(id)+'">'+esc(name)+' ('+esc(id)+')</option>':'';\n    }).join('');\n    ps.value=selectedProject||'';\n    as.innerHTML='<option value="">Unassigned</option>'+team.map(r=>{\n      const id=r['Team ID']||r.TeamID||r['Team Member ID']||r.TeamMemberID||r['Member ID']||r.MemberID||r.id||r.ID||'';\n      const name=r.Name||r['Team Name']||r['Member Name']||r.name||id;\n      return id?'<option value="'+esc(id)+'">'+esc(name)+'</option>':'';\n    }).join('');\n    as.value=selectedAssigned||'';\n  }\n  function openTaskModal(record){\n    document.getElementById('taskModalTitle').textContent=record?'Edit Task':'Add Task';\n    document.getElementById('taskId').value=record?.['Task ID']||'';\n    populateTaskOptions(record?.['Project ID']||'',record?.['Assigned To ID']||record?.['Assigned To']||'');\n    document.getElementById('tkName').value=record?.['Task Name']||'';\n    document.getElementById('tkPriority').value=record?.Priority||'Medium';\n    document.getElementById('tkDeadline').value=isoInputDate(record?.Deadline);\n    document.getElementById('tkStatus').value=record?.Status||'Not Started';\n    document.getElementById('tkProgress').value=Number(record?.Progress||0);\n    document.getElementById('tkNotes').value=record?.Notes||'';\n    document.getElementById('taskFormError').style.display='none';\n    document.getElementById('taskModal').classList.add('open');\n  }\n  function closeTaskModal(){document.getElementById('taskModal').classList.remove('open')}\n  async function mutateTask(action,payload){\n    if(action==='delete' && !isAdminMode) throw new Error('Admin Mode is required to delete tasks.');\n    const adminToken=localStorage.getItem(ADMIN_TOKEN_KEY)||'';\n    const response=await fetch('/api/mutate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({entity:'task',action,payload,adminToken})});\n    const result=await response.json().catch(()=>({}));\n    if(!response.ok||result.ok===false) throw new Error(result.error||'Unable to save task');\n    return result;\n  }\n  async function saveTask(e){\n    e.preventDefault();\n    const btn=document.getElementById('taskSave'),err=document.getElementById('taskFormError');\n    btn.disabled=true;btn.textContent='Saving...';err.style.display='none';\n    const editing=Boolean(document.getElementById('taskId').value.trim());\n    const progress=Math.max(0,Math.min(100,Number(document.getElementById('tkProgress').value||0)));\n    const payload={\n      taskId:editing?document.getElementById('taskId').value.trim():'',\n      projectId:document.getElementById('tkProject').value.trim(),\n      taskName:document.getElementById('tkName').value.trim(),\n      assignedTo:document.getElementById('tkAssigned').value.trim(),\n      priority:document.getElementById('tkPriority').value,\n      deadline:document.getElementById('tkDeadline').value,\n      status:document.getElementById('tkStatus').value,\n      progress,\n      notes:document.getElementById('tkNotes').value.trim()\n    };\n    try{await mutateTask(editing?'update':'create',payload);closeTaskModal();await refreshDashboard()}catch(e){err.textContent=e.message;err.style.display='block'}finally{btn.disabled=false;btn.textContent='Save Task'}\n  }\n  function bindTaskActions(){\n    document.querySelectorAll('[data-task-edit]').forEach(b=>b.onclick=()=>{\n      const r=currentTaskRows().find(x=>String(x['Task ID'])===String(b.dataset.taskEdit));\n      if(r) openTaskModal(r);\n    });\n    document.querySelectorAll('[data-task-delete]').forEach(b=>b.onclick=async()=>{\n      if(!isAdminMode){alert('Enable Admin Mode to delete tasks.');return;}\n      const r=currentTaskRows().find(x=>String(x['Task ID'])===String(b.dataset.taskDelete));\n      if(!r||!confirm('Delete task '+(r['Task Name']||r['Task ID'])+'? This removes the row from Google Sheets.')) return;\n      b.disabled=true;try{await mutateTask('delete',{taskId:r['Task ID']});await refreshDashboard()}catch(e){alert(e.message)}finally{b.disabled=false}\n    });\n  }\n
+  }
+
+  let currentTasks = [];
+  function currentTaskRows(){
+    const source=window.__dashboardData?.data||{};
+    return Array.isArray(source.tasks)?source.tasks:[];
+  }
+  function taskTeamRows(){
+    const source=window.__dashboardData?.data||{};
+    return Array.isArray(source.team)?source.team:[];
+  }
+  function taskProjectRows(){
+    const source=window.__dashboardData?.data||{};
+    return Array.isArray(source.projects)?source.projects:[];
+  }
+  function populateTaskOptions(selectedProject='',selectedAssigned=''){
+    const ps=document.getElementById('tkProject'), as=document.getElementById('tkAssigned');
+    const projects=taskProjectRows(), team=taskTeamRows();
+    ps.innerHTML='<option value="">Select project</option>'+projects.map(r=>{
+      const id=r['Project ID']||r.id||r.ID||''; const name=r['Project Name']||r.name||id;
+      return id?'<option value="'+esc(id)+'">'+esc(name)+' ('+esc(id)+')</option>':'';
+    }).join('');
+    ps.value=selectedProject||'';
+    as.innerHTML='<option value="">Unassigned</option>'+team.map(r=>{
+      const id=r['Team ID']||r.TeamID||r['Team Member ID']||r.TeamMemberID||r['Member ID']||r.MemberID||r.id||r.ID||'';
+      const name=r.Name||r['Team Name']||r['Member Name']||r.name||id;
+      return id?'<option value="'+esc(id)+'">'+esc(name)+'</option>':'';
+    }).join('');
+    as.value=selectedAssigned||'';
+  }
+  function openTaskModal(record){
+    document.getElementById('taskModalTitle').textContent=record?'Edit Task':'Add Task';
+    document.getElementById('taskId').value=record?.['Task ID']||'';
+    populateTaskOptions(record?.['Project ID']||'',record?.['Assigned To ID']||record?.['Assigned To']||'');
+    document.getElementById('tkName').value=record?.['Task Name']||'';
+    document.getElementById('tkPriority').value=record?.Priority||'Medium';
+    document.getElementById('tkDeadline').value=isoInputDate(record?.Deadline);
+    document.getElementById('tkStatus').value=record?.Status||'Not Started';
+    document.getElementById('tkProgress').value=Number(record?.Progress||0);
+    document.getElementById('tkNotes').value=record?.Notes||'';
+    document.getElementById('taskFormError').style.display='none';
+    document.getElementById('taskModal').classList.add('open');
+  }
+  function closeTaskModal(){document.getElementById('taskModal').classList.remove('open')}
+  async function mutateTask(action,payload){
+    if(action==='delete' && !isAdminMode) throw new Error('Admin Mode is required to delete tasks.');
+    const adminToken=localStorage.getItem(ADMIN_TOKEN_KEY)||'';
+    const response=await fetch('/api/mutate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({entity:'task',action,payload,adminToken})});
+    const result=await response.json().catch(()=>({}));
+    if(!response.ok||result.ok===false) throw new Error(result.error||'Unable to save task');
+    return result;
+  }
+  async function saveTask(e){
+    e.preventDefault();
+    const btn=document.getElementById('taskSave'),err=document.getElementById('taskFormError');
+    btn.disabled=true;btn.textContent='Saving...';err.style.display='none';
+    const editing=Boolean(document.getElementById('taskId').value.trim());
+    const progress=Math.max(0,Math.min(100,Number(document.getElementById('tkProgress').value||0)));
+    const payload={
+      taskId:editing?document.getElementById('taskId').value.trim():'',
+      projectId:document.getElementById('tkProject').value.trim(),
+      taskName:document.getElementById('tkName').value.trim(),
+      assignedTo:document.getElementById('tkAssigned').value.trim(),
+      priority:document.getElementById('tkPriority').value,
+      deadline:document.getElementById('tkDeadline').value,
+      status:document.getElementById('tkStatus').value,
+      progress,
+      notes:document.getElementById('tkNotes').value.trim()
+    };
+    try{await mutateTask(editing?'update':'create',payload);closeTaskModal();await refreshDashboard()}catch(e){err.textContent=e.message;err.style.display='block'}finally{btn.disabled=false;btn.textContent='Save Task'}
+  }
+  function bindTaskActions(){
+    document.querySelectorAll('[data-task-edit]').forEach(b=>b.onclick=()=>{
+      const r=currentTaskRows().find(x=>String(x['Task ID'])===String(b.dataset.taskEdit));
+      if(r) openTaskModal(r);
+    });
+    document.querySelectorAll('[data-task-delete]').forEach(b=>b.onclick=async()=>{
+      if(!isAdminMode){alert('Enable Admin Mode to delete tasks.');return;}
+      const r=currentTaskRows().find(x=>String(x['Task ID'])===String(b.dataset.taskDelete));
+      if(!r||!confirm('Delete task '+(r['Task Name']||r['Task ID'])+'? This removes the row from Google Sheets.')) return;
+      b.disabled=true;try{await mutateTask('delete',{taskId:r['Task ID']});await refreshDashboard()}catch(e){alert(e.message)}finally{b.disabled=false}
+    });
+  }
+
+
+  function currentTeamRows(){
+    const source=window.__dashboardData?.data||{};
+    return Array.isArray(source.team) ? source.team : rowsOf(window.__dashboardData?.teamData);
+  }
+  function teamMemberId(r){ return r?.['Team Member ID']||r?.['Team ID']||r?.['Member ID']||r?.id||r?.ID||''; }
+  function openTeamModal(record){
+    document.getElementById('teamModalTitle').textContent=record?'Edit Team Member':'Add Team Member';
+    document.getElementById('teamMemberId').value=teamMemberId(record)||'';
+    document.getElementById('tmName').value=record?.Name||'';
+    document.getElementById('tmRole').value=record?.Role||'';
+    document.getElementById('tmPhone').value=record?.Phone||'';
+    document.getElementById('tmEmail').value=record?.Email||'';
+    document.getElementById('tmJoiningDate').value=isoInputDate(record?.['Joining Date']);
+    document.getElementById('tmStatus').value=record?.Status||'Active';
+    document.getElementById('teamFormError').style.display='none';
+    document.getElementById('teamModal').classList.add('open');
+  }
+  function closeTeamModal(){document.getElementById('teamModal').classList.remove('open')}
+  async function mutateTeam(action,payload){
+    if(action==='delete' && !isAdminMode) throw new Error('Admin Mode is required to delete team members.');
+    const adminToken=localStorage.getItem(ADMIN_TOKEN_KEY)||'';
+    const response=await fetch('/api/mutate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({entity:'team',action,payload,adminToken})});
+    const result=await response.json().catch(()=>({}));
+    if(!response.ok||result.ok===false) throw new Error(result.error||'Unable to save team member');
+    return result;
+  }
+  async function saveTeam(e){
+    e.preventDefault();
+    const btn=document.getElementById('teamSave'),err=document.getElementById('teamFormError');
+    btn.disabled=true;btn.textContent='Saving...';err.style.display='none';
+    const editing=Boolean(document.getElementById('teamMemberId').value.trim());
+    const payload={
+      teamMemberId:editing?document.getElementById('teamMemberId').value.trim():'',
+      name:document.getElementById('tmName').value.trim(),
+      role:document.getElementById('tmRole').value.trim(),
+      phone:document.getElementById('tmPhone').value.trim(),
+      email:document.getElementById('tmEmail').value.trim(),
+      joiningDate:document.getElementById('tmJoiningDate').value,
+      status:document.getElementById('tmStatus').value
+    };
+    try{await mutateTeam(editing?'update':'create',payload);closeTeamModal();await refreshDashboard()}
+    catch(e){err.textContent=e.message;err.style.display='block'}
+    finally{btn.disabled=false;btn.textContent='Save Team Member'}
+  }
+  function bindTeamActions(){
+    document.querySelectorAll('[data-team-edit]').forEach(b=>b.onclick=()=>{
+      const r=currentTeamRows().find(x=>String(teamMemberId(x))===String(b.dataset.teamEdit));
+      if(r) openTeamModal(r);
+    });
+    document.querySelectorAll('[data-team-delete]').forEach(b=>b.onclick=async()=>{
+      if(!isAdminMode){alert('Enable Admin Mode to delete team members.');return;}
+      const r=currentTeamRows().find(x=>String(teamMemberId(x))===String(b.dataset.teamDelete));
+      if(!r||!confirm('Delete team member '+(r.Name||b.dataset.teamDelete)+'? This removes the row from Google Sheets.')) return;
+      b.disabled=true;
+      try{await mutateTeam('delete',{teamMemberId:b.dataset.teamDelete});await refreshDashboard()}catch(e){alert(e.message)}finally{b.disabled=false}
+    });
+  }
 
   async function mutateProspect(action, payload){
     if((action==='update' || action==='delete') && !isAdminMode){
@@ -662,6 +825,14 @@
     if(projectState) projectState.textContent=isAdminMode
       ? 'Admin access enabled · Edit/Delete available'
       : 'Add/View available to all users · Edit/Delete require Admin Mode';
+    const taskState=document.getElementById('taskPermissionState');
+    if(taskState) taskState.textContent=isAdminMode
+      ? 'Admin access enabled · Full task control available'
+      : 'Add / Edit / Assign / Progress / Status / Deadline available to users · Delete requires Admin Mode';
+    const teamState=document.getElementById('teamPermissionState');
+    if(teamState) teamState.textContent=isAdminMode
+      ? 'Admin access enabled · Full team control available'
+      : 'Add / View / Edit available to users · Delete requires Admin Mode';
 
     document.querySelectorAll('.admin-only').forEach(function(el){
       el.classList.toggle('role-hidden',!isAdminMode);
@@ -763,6 +934,11 @@
   document.getElementById('taskCancel').addEventListener('click',closeTaskModal);
   document.getElementById('taskForm').addEventListener('submit',saveTask);
   document.getElementById('taskModal').addEventListener('click',e=>{if(e.target.id==='taskModal')closeTaskModal()});
+  document.getElementById('teamForm').addEventListener('submit',saveTeam);
+  document.getElementById('addTeamBtn').addEventListener('click',()=>openTeamModal());
+  document.getElementById('teamModalClose').addEventListener('click',closeTeamModal);
+  document.getElementById('teamCancel').addEventListener('click',closeTeamModal);
+  document.getElementById('teamModal').addEventListener('click',e=>{if(e.target.id==='teamModal')closeTeamModal()});
   document.getElementById('prospectModalClose').addEventListener('click',closeProspectModal);
   document.getElementById('prospectCancel').addEventListener('click',closeProspectModal);
   document.getElementById('prospectForm').addEventListener('submit',saveProspect);
