@@ -201,9 +201,9 @@
           <label>Service<input id="prService"></label>
           <label>Start Date<input id="prStartDate" type="date"></label>
           <label>Deadline<input id="prDeadline" type="date"></label>
-          <label>Status<select id="prStatus"><option>Not Started</option><option>Planning</option><option>In Progress</option><option>On Hold</option><option>Completed</option><option>Cancelled</option></select></label>
+          <label class="admin-only" data-role="admin">Status<select id="prStatus"><option>Not Started</option><option>Planning</option><option>In Progress</option><option>On Hold</option><option>Completed</option><option>Cancelled</option></select></label>
           <label>Priority<select id="prPriority"><option>Low</option><option>Medium</option><option>High</option><option>Urgent</option></select></label>
-          <label>Manager<select id="prManager"></select></label>
+          <label class="admin-only" data-role="admin">Manager<select id="prManager"></select></label>
           <label class="full">Notes<textarea id="prNotes" rows="3"></textarea></label>
         </div>
         <div id="projectFormError" class="form-error"></div>
@@ -401,7 +401,7 @@
     document.getElementById('prService').value=record?.Service||'';
     document.getElementById('prStartDate').value=isoInputDate(record?.['Start Date']);
     document.getElementById('prDeadline').value=isoInputDate(record?.Deadline);
-    document.getElementById('prStatus').value=record?.Status||'Planning';
+    document.getElementById('prStatus').value=record?.Status||'Not Started';
     document.getElementById('prPriority').value=record?.Priority||'Medium';
     document.getElementById('prManager').value=record?.Manager||'';
     document.getElementById('prNotes').value=record?.Notes||'';
@@ -417,16 +417,23 @@
     e.preventDefault();
     const btn=document.getElementById('projectSave'), err=document.getElementById('projectFormError');
     btn.disabled=true; btn.textContent='Saving...'; err.style.display='none';
+    const editing = Boolean(document.getElementById('projectId').value.trim());
+    if(editing && !isAdminMode){
+      err.textContent='Admin Mode is required to edit projects.';
+      err.style.display='block';
+      btn.disabled=false; btn.textContent='Save Project';
+      return;
+    }
     const payload={
-      projectId:document.getElementById('projectId').value.trim(),
+      projectId:editing ? document.getElementById('projectId').value.trim() : '',
       clientId:document.getElementById('prClientId').value.trim(),
       projectName:document.getElementById('prName').value.trim(),
       service:document.getElementById('prService').value.trim(),
       startDate:document.getElementById('prStartDate').value,
       deadline:document.getElementById('prDeadline').value,
-      status:document.getElementById('prStatus').value,
+      status:isAdminMode ? document.getElementById('prStatus').value : 'Not Started',
       priority:document.getElementById('prPriority').value,
-      manager:document.getElementById('prManager').value.trim(),
+      manager:isAdminMode ? document.getElementById('prManager').value.trim() : '',
       notes:document.getElementById('prNotes').value.trim()
     };
     try{
