@@ -61,7 +61,7 @@
     .prospect-toolbar{display:flex;justify-content:flex-end;align-items:center;gap:12px;padding:12px 18px;border-bottom:1px solid #edf1f6}
     .btn{border:0;border-radius:9px;padding:9px 14px;font-size:12px;font-weight:700;cursor:pointer}
     .primary-btn{background:#2563eb;color:#fff}.secondary-btn{background:#eef2f7;color:#344054}
-    .action-btn{border:1px solid #dfe6f0;background:#fff;border-radius:7px;padding:5px 8px;font-size:11px;cursor:pointer;margin-right:5px}.action-btn:hover{background:#f4f7fb}
+    .action-btn{border:1px solid #dfe6f0;background:#fff;border-radius:7px;padding:5px 8px;font-size:11px;cursor:pointer;margin-right:5px}.action-btn:hover{background:#f4f7fb}.project-toolbar{display:flex;justify-content:flex-end;align-items:center;gap:12px;padding:12px 18px;border-bottom:1px solid #edf1f6}.project-actions{white-space:nowrap}
     .modal-backdrop{position:fixed;inset:0;background:rgba(15,23,42,.48);display:none;align-items:center;justify-content:center;padding:20px;z-index:30}
     .modal-backdrop.open{display:flex}.modal-card{width:min(720px,100%);max-height:90vh;overflow:auto;background:#fff;border-radius:16px;box-shadow:0 20px 60px rgba(15,23,42,.25)}
     .modal-head{display:flex;justify-content:space-between;align-items:flex-start;padding:20px;border-bottom:1px solid #edf1f6}.modal-head h3{margin:0 0 5px;font-size:20px}
@@ -133,7 +133,8 @@
 
   <div class="section data-section" id="projectsSection">
     <div class="section-head">Projects <span class="section-meta" id="projectsMeta">0 records</span></div>
-    <div class="table-wrap"><table class="table"><thead><tr><th>Project</th><th>Client</th><th>Service</th><th>Dates</th><th>Status</th><th>Priority</th><th>Manager</th></tr></thead><tbody id="projectsTable"></tbody></table></div>
+    <div class="project-toolbar"><span class="admin-state" id="projectPermissionState"></span><button class="btn primary-btn" id="addProjectBtn" type="button">+ Add Project</button></div>
+    <div class="table-wrap"><table class="table"><thead><tr><th>Project</th><th>Client</th><th>Service</th><th>Start Date</th><th>Deadline</th><th>Status</th><th>Priority</th><th>Manager</th><th>Actions</th></tr></thead><tbody id="projectsTable"></tbody></table></div>
   </div>
 
   <div class="section data-section" id="tasksSection">
@@ -183,6 +184,28 @@
         </label>
         <div id="adminFormError" class="form-error"></div>
         <div class="modal-actions"><button type="button" class="btn secondary-btn" id="adminCancel">Cancel</button><button type="submit" class="btn primary-btn" id="adminLogin">Enable Admin Mode</button></div>
+      </form>
+    </div>
+  </div>
+
+  <div id="projectModal" class="modal-backdrop" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-head"><div><h3 id="projectModalTitle">Add Project</h3><div class="muted">Changes are saved to Google Sheets.</div></div><button class="modal-close" id="projectModalClose" type="button">×</button></div>
+      <form id="projectForm">
+        <input type="hidden" id="projectId">
+        <div class="form-grid">
+          <label>Client ID<input id="prClientId" required></label>
+          <label>Project Name<input id="prName" required></label>
+          <label>Service<input id="prService"></label>
+          <label>Start Date<input id="prStartDate" type="date"></label>
+          <label>Deadline<input id="prDeadline" type="date"></label>
+          <label>Status<select id="prStatus"><option>Planning</option><option>In Progress</option><option>On Hold</option><option>Completed</option><option>Cancelled</option></select></label>
+          <label>Priority<select id="prPriority"><option>Low</option><option>Medium</option><option>High</option><option>Urgent</option></select></label>
+          <label>Manager<input id="prManager"></label>
+          <label class="full">Notes<textarea id="prNotes" rows="3"></textarea></label>
+        </div>
+        <div id="projectFormError" class="form-error"></div>
+        <div class="modal-actions"><button type="button" class="btn secondary-btn" id="projectCancel">Cancel</button><button type="submit" class="btn primary-btn" id="projectSave">Save Project</button></div>
       </form>
     </div>
   </div>
@@ -258,28 +281,28 @@
       '<tr><td><span class="mini-title">'+esc(r.Name)+'</span></td><td>'+esc(r.Business)+'</td><td>'+contact(r)+'</td><td>'+esc(r.Service)+'</td><td>'+esc(r.Source)+'</td><td>'+money(r.Quote)+'</td><td>'+statusBadge(r.Status)+'</td><td>'+esc(r['Follow-up Date'])+'</td><td>'+ (isAdminMode ? '<button class="action-btn" type="button" data-prospect-edit="'+esc(r['Prospect ID'])+'">Edit</button><button class="action-btn" type="button" data-prospect-delete="'+esc(r['Prospect ID'])+'">Delete</button>' : '<span class="muted">View only</span>') +'</td></tr>',10,'prospectsMeta');
 
     setTable('clientsTable',clients,r =>
-      '<tr><td><span class="mini-title">'+esc(r.Name)+'</span></td><td>'+esc(r.Business)+'</td><td>'+contact(r)+'</td><td>'+esc(r.Service)+'</td><td>'+money(r['Contract Value'])+'</td><td>'+esc(r['Start Date'])+'</td><td>'+statusBadge(r.Status)+'</td></tr>',7,'clientsMeta');
+      '<tr><td><span class="mini-title">'+esc(r.Name)+'</span></td><td>'+esc(r.Business)+'</td><td>'+contact(r)+'</td><td>'+esc(r.Service)+'</td><td>'+money(r['Contract Value'])+'</td><td>'+esc(formatDateOnly(r['Start Date']))+'</td><td>'+statusBadge(r.Status)+'</td></tr>',7,'clientsMeta');
 
     setTable('projectsTable',projects,r =>
-      '<tr><td><span class="mini-title">'+esc(r['Project Name'])+'</span><span class="subtext">'+esc(r['Project ID'])+'</span></td><td>'+esc(r.clientBusiness || r.clientName)+'</td><td>'+esc(r.Service)+'</td><td>'+esc(r['Start Date'])+' → '+esc(r.Deadline)+'</td><td>'+statusBadge(r.Status)+'</td><td>'+statusBadge(r.Priority)+'</td><td>'+esc(r.Manager)+'</td></tr>',7,'projectsMeta');
+      '<tr><td><span class="mini-title">'+esc(r['Project Name'])+'</span><span class="subtext">'+esc(r['Project ID'])+'</span></td><td>'+esc(r.clientBusiness || r.clientName || r['Client ID'])+'</td><td>'+esc(r.Service)+'</td><td>'+esc(formatDateOnly(r['Start Date']))+'</td><td>'+esc(formatDateOnly(r.Deadline))+'</td><td>'+statusBadge(r.Status)+'</td><td>'+statusBadge(r.Priority)+'</td><td>'+esc(r.Manager)+'</td><td class="project-actions">'+(isAdminMode ? '<button class="action-btn" type="button" data-project-edit="'+esc(r['Project ID'])+'">Edit</button><button class="action-btn" type="button" data-project-delete="'+esc(r['Project ID'])+'">Delete</button>' : '<span class="muted">View only</span>')+'</td></tr>',9,'projectsMeta');
 
     setTable('tasksTable',tasks,r =>
-      '<tr><td><span class="mini-title">'+esc(r['Task Name'])+'</span><span class="subtext">'+esc(r['Task ID'])+'</span></td><td>'+esc(r.projectName)+'</td><td>'+esc(r.clientName)+'</td><td>'+esc(r.assignedToName)+'</td><td>'+statusBadge(r.Priority)+'</td><td>'+esc(r.Deadline)+'</td><td>'+statusBadge(r.Status)+'</td><td>'+esc(r.Progress)+'%</td></tr>',8,'tasksMeta');
+      '<tr><td><span class="mini-title">'+esc(r['Task Name'])+'</span><span class="subtext">'+esc(r['Task ID'])+'</span></td><td>'+esc(r.projectName)+'</td><td>'+esc(r.clientName)+'</td><td>'+esc(r.assignedToName)+'</td><td>'+statusBadge(r.Priority)+'</td><td>'+esc(formatDateOnly(r.Deadline))+'</td><td>'+statusBadge(r.Status)+'</td><td>'+esc(r.Progress)+'%</td></tr>',8,'tasksMeta');
 
     setTable('teamTable',team,r =>
       '<tr><td><span class="mini-title">'+esc(r.Name)+'</span></td><td>'+esc(r.Role)+'</td><td>'+contact(r)+'</td><td>'+esc(r['Joining Date'])+'</td><td>'+statusBadge(r.Status)+'</td></tr>',5,'teamMeta');
 
     setTable('invoicesTable',invoices,r =>
-      '<tr><td><span class="mini-title">'+esc(r['Invoice ID'])+'</span></td><td>'+esc(r.clientName)+'</td><td>'+esc(r.projectName)+'</td><td>'+esc(r['Invoice Date'])+'</td><td>'+esc(r['Due Date'])+'</td><td>'+money(r.Amount)+'</td><td>'+money(r['Paid Amount'])+'</td><td>'+money(r.Balance)+'</td><td>'+statusBadge(r.Status)+'</td></tr>',9,'invoicesMeta');
+      '<tr><td><span class="mini-title">'+esc(r['Invoice ID'])+'</span></td><td>'+esc(r.clientName)+'</td><td>'+esc(r.projectName)+'</td><td>'+esc(formatDateOnly(r['Invoice Date']))+'</td><td>'+esc(formatDateOnly(r['Due Date']))+'</td><td>'+money(r.Amount)+'</td><td>'+money(r['Paid Amount'])+'</td><td>'+money(r.Balance)+'</td><td>'+statusBadge(r.Status)+'</td></tr>',9,'invoicesMeta');
 
     setTable('paymentsTable',payments,r =>
-      '<tr><td><span class="mini-title">'+esc(r['Payment ID'])+'</span></td><td>'+esc(r.clientName)+'</td><td>'+esc(r.projectName)+'</td><td>'+esc(r.invoiceName || r['Invoice ID'])+'</td><td>'+esc(r['Payment Date'])+'</td><td>'+money(r.Amount)+'</td><td>'+esc(r['Payment Method'])+'</td><td>'+statusBadge(r.Status)+'</td></tr>',8,'paymentsMeta');
+      '<tr><td><span class="mini-title">'+esc(r['Payment ID'])+'</span></td><td>'+esc(r.clientName)+'</td><td>'+esc(r.projectName)+'</td><td>'+esc(r.invoiceName || r['Invoice ID'])+'</td><td>'+esc(formatDateOnly(r['Payment Date']))+'</td><td>'+money(r.Amount)+'</td><td>'+esc(r['Payment Method'])+'</td><td>'+statusBadge(r.Status)+'</td></tr>',8,'paymentsMeta');
 
     setTable('activitiesTable',activities,r =>
-      '<tr><td>'+statusBadge(r['Activity Type'])+'</td><td>'+esc(r.clientName)+'</td><td>'+esc(r.projectName)+'</td><td>'+esc(r.Date)+'</td><td>'+esc(r.Description)+'</td><td>'+esc(r.userName || r.User)+'</td></tr>',6,'activitiesMeta');
+      '<tr><td>'+statusBadge(r['Activity Type'])+'</td><td>'+esc(r.clientName)+'</td><td>'+esc(r.projectName)+'</td><td>'+esc(formatDateOnly(r.Date))+'</td><td>'+esc(r.Description)+'</td><td>'+esc(r.userName || r.User)+'</td></tr>',6,'activitiesMeta');
 
     setTable('followupsTable',followups,r =>
-      '<tr><td>'+esc(r.prospectName)+'</td><td>'+esc(r.clientName)+'</td><td>'+esc(r.Date)+'</td><td>'+esc(r.Type)+'</td><td>'+esc(r.Purpose)+'</td><td>'+statusBadge(r.Status)+'</td><td>'+esc(r['Next Follow-up'])+'</td></tr>',7,'followupsMeta');
+      '<tr><td>'+esc(r.prospectName)+'</td><td>'+esc(r.clientName)+'</td><td>'+esc(formatDateOnly(r.Date))+'</td><td>'+esc(r.Type)+'</td><td>'+esc(r.Purpose)+'</td><td>'+statusBadge(r.Status)+'</td><td>'+esc(formatDateOnly(r['Next Follow-up']))+'</td></tr>',7,'followupsMeta');
 
     setTable('documentsTable',documents,r =>
       '<tr><td><span class="mini-title">'+esc(r['Document Name'])+'</span></td><td>'+esc(r['Document Type'])+'</td><td>'+esc(r.clientName)+'</td><td>'+esc(r.projectName)+'</td><td>'+esc(r.Date)+'</td><td>'+ (r['File Link'] ? '<a href="'+esc(r['File Link'])+'" target="_blank" rel="noopener">Open file</a>' : '-') +'</td><td>'+esc(r.Notes)+'</td></tr>',7,'documentsMeta');
@@ -321,6 +344,7 @@
 
     renderDataTables(data);
     bindProspectActions();
+    bindProjectActions();
     document.getElementById('updated').textContent = 'Last updated: ' + new Date().toLocaleTimeString('en-IN');
   }
 
@@ -328,6 +352,72 @@
     return String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   }
 
+
+  async function mutateProject(action, payload){
+    if((action==='update' || action==='delete') && !isAdminMode){
+      throw new Error('Admin Mode is required for this action.');
+    }
+    const adminToken = localStorage.getItem(ADMIN_TOKEN_KEY) || '';
+    const response = await fetch('/api/mutate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({entity:'project',action,payload,adminToken})});
+    const result = await response.json().catch(()=>({}));
+    if(!response.ok || result.ok === false) throw new Error(result.error || 'Unable to save project');
+    return result;
+  }
+  function openProjectModal(record){
+    document.getElementById('projectModalTitle').textContent=record?'Edit Project':'Add Project';
+    document.getElementById('projectId').value=record?.['Project ID']||'';
+    document.getElementById('prClientId').value=record?.['Client ID']||'';
+    document.getElementById('prName').value=record?.['Project Name']||'';
+    document.getElementById('prService').value=record?.Service||'';
+    document.getElementById('prStartDate').value=isoInputDate(record?.['Start Date']);
+    document.getElementById('prDeadline').value=isoInputDate(record?.Deadline);
+    document.getElementById('prStatus').value=record?.Status||'Planning';
+    document.getElementById('prPriority').value=record?.Priority||'Medium';
+    document.getElementById('prManager').value=record?.Manager||'';
+    document.getElementById('prNotes').value=record?.Notes||'';
+    document.getElementById('projectFormError').style.display='none';
+    document.getElementById('projectModal').classList.add('open');
+  }
+  function closeProjectModal(){document.getElementById('projectModal').classList.remove('open')}
+  function currentProjects(){
+    const source = window.__dashboardData?.data || {};
+    return Array.isArray(source.projects) ? source.projects : [];
+  }
+  async function saveProject(e){
+    e.preventDefault();
+    const btn=document.getElementById('projectSave'), err=document.getElementById('projectFormError');
+    btn.disabled=true; btn.textContent='Saving...'; err.style.display='none';
+    const payload={
+      projectId:document.getElementById('projectId').value.trim(),
+      clientId:document.getElementById('prClientId').value.trim(),
+      projectName:document.getElementById('prName').value.trim(),
+      service:document.getElementById('prService').value.trim(),
+      startDate:document.getElementById('prStartDate').value,
+      deadline:document.getElementById('prDeadline').value,
+      status:document.getElementById('prStatus').value,
+      priority:document.getElementById('prPriority').value,
+      manager:document.getElementById('prManager').value.trim(),
+      notes:document.getElementById('prNotes').value.trim()
+    };
+    try{
+      await mutateProject(payload.projectId?'update':'create',payload);
+      closeProjectModal(); await refreshDashboard();
+    }catch(e){err.textContent=e.message;err.style.display='block'}
+    finally{btn.disabled=false;btn.textContent='Save Project'}
+  }
+  function bindProjectActions(){
+    document.querySelectorAll('[data-project-edit]').forEach(b=>b.onclick=()=>{
+      if(!isAdminMode){ alert('Enable Admin Mode to edit projects.'); return; }
+      const r=currentProjects().find(x=>String(x['Project ID'])===String(b.dataset.projectEdit)); if(r) openProjectModal(r);
+    });
+    document.querySelectorAll('[data-project-delete]').forEach(b=>b.onclick=async()=>{
+      if(!isAdminMode){ alert('Enable Admin Mode to delete projects.'); return; }
+      const r=currentProjects().find(x=>String(x['Project ID'])===String(b.dataset.projectDelete));
+      if(!r || !confirm('Delete project '+(r['Project Name']||r['Project ID'])+'? This removes the row from Google Sheets.')) return;
+      b.disabled=true;
+      try{await mutateProject('delete',{projectId:r['Project ID']});await refreshDashboard()}catch(e){alert(e.message)}finally{b.disabled=false}
+    });
+  }
 
   async function mutateProspect(action, payload){
     if((action==='update' || action==='delete') && !isAdminMode){
@@ -342,6 +432,31 @@
   function isoToSheetDate(v){
     if(!v) return '';
     const p=String(v).split('-'); return p.length===3 ? p[2]+'/'+p[1]+'/'+p[0] : v;
+  }
+  function formatDateOnly(v){
+    if(v===null || v===undefined || v==='') return '';
+    const s=String(v).trim();
+    if(!s) return '';
+    let d;
+    if(/^\d{4}-\d{2}-\d{2}/.test(s)) d=new Date(s);
+    else if(/^\d{2}\/\d{2}\/\d{4}$/.test(s)){
+      const p=s.split('/');
+      d=new Date(Number(p[2]),Number(p[1])-1,Number(p[0]));
+    } else d=new Date(s);
+    if(isNaN(d.getTime())) return s;
+    return String(d.getDate()).padStart(2,'0')+' '+d.toLocaleString('en-IN',{month:'short'})+' '+d.getFullYear();
+  }
+  function isoInputDate(v){
+    if(!v) return '';
+    const s=String(v).trim();
+    if(/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0,10);
+    if(/^\d{2}\/\d{2}\/\d{4}$/.test(s)){
+      const p=s.split('/');
+      return p[2]+'-'+p[1]+'-'+p[0];
+    }
+    const d=new Date(s);
+    if(isNaN(d.getTime())) return '';
+    return d.toISOString().slice(0,10);
   }
   function sheetToIsoDate(v){
     const p=String(v||'').split('/');
@@ -478,11 +593,15 @@
   function updateAdminUI(){
     const btn=document.getElementById('adminModeBtn');
     const state=document.getElementById('prospectPermissionState');
+    const projectState=document.getElementById('projectPermissionState');
     btn.checked=isAdminMode;
     btn.setAttribute('aria-checked',String(isAdminMode));
     state.textContent=isAdminMode
       ? 'Admin access enabled · Edit/Delete available'
       : 'Add is available to all users · Edit/Delete require Admin Mode';
+    if(projectState) projectState.textContent=isAdminMode
+      ? 'Admin access enabled · Edit/Delete available'
+      : 'Add/View available to all users · Edit/Delete require Admin Mode';
   }
 
   function openAdminModal(){
@@ -506,6 +625,7 @@
       updateAdminUI();
       renderDataTables(window.__dashboardData || {});
       bindProspectActions();
+      bindProjectActions();
     }catch(e){
       err.textContent=e.message;
       err.style.display='block';
@@ -538,6 +658,7 @@
     if(window.__dashboardData){
       renderDataTables(window.__dashboardData);
       bindProspectActions();
+      bindProjectActions();
     }
   }
 
@@ -554,6 +675,11 @@
   document.getElementById('adminModal').addEventListener('click',e=>{if(e.target.id==='adminModal')closeAdminModal()});
 
   document.getElementById('addProspectBtn').addEventListener('click',()=>openProspectModal());
+  document.getElementById('addProjectBtn').addEventListener('click',()=>openProjectModal());
+  document.getElementById('projectModalClose').addEventListener('click',closeProjectModal);
+  document.getElementById('projectCancel').addEventListener('click',closeProjectModal);
+  document.getElementById('projectForm').addEventListener('submit',saveProject);
+  document.getElementById('projectModal').addEventListener('click',e=>{if(e.target.id==='projectModal')closeProjectModal});
   document.getElementById('prospectModalClose').addEventListener('click',closeProspectModal);
   document.getElementById('prospectCancel').addEventListener('click',closeProspectModal);
   document.getElementById('prospectForm').addEventListener('submit',saveProspect);
