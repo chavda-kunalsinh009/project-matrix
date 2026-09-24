@@ -130,7 +130,8 @@
 
   <div class="section data-section admin-only" id="clientsSection">
     <div class="section-head">Clients <span class="section-meta" id="clientsMeta">0 records</span></div>
-    <div class="table-wrap"><table class="table"><thead><tr><th>Client</th><th>Business</th><th>Contact</th><th>Service</th><th>Contract</th><th>Start Date</th><th>Status</th></tr></thead><tbody id="clientsTable"></tbody></table></div>
+    <div class="project-toolbar"><span class="admin-state" id="clientPermissionState">Admin access · Full client control</span><button class="btn primary-btn" id="addClientBtn" type="button">+ Add Client</button></div>
+    <div class="table-wrap"><table class="table"><thead><tr><th>Client</th><th>Business</th><th>Contact</th><th>Service</th><th>Contract</th><th>Start Date</th><th>Status</th><th>Actions</th></tr></thead><tbody id="clientsTable"></tbody></table></div>
   </div>
 
   <div class="section data-section" id="projectsSection">
@@ -235,6 +236,29 @@
     </div>
   </div>
 
+  <div id="clientModal" class="modal-backdrop" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-head"><div><h3 id="clientModalTitle">Add Client</h3><div class="muted">Changes are saved to Google Sheets.</div></div><button class="modal-close" id="clientModalClose" type="button">×</button></div>
+      <form id="clientForm">
+        <input type="hidden" id="clientId">
+        <div class="form-grid">
+          <label>Prospect ID<input id="clProspectId"></label>
+          <label>Name<input id="clName" required></label>
+          <label>Business<input id="clBusiness" required></label>
+          <label>Phone<input id="clPhone"></label>
+          <label>Email<input id="clEmail" type="email"></label>
+          <label>Service<input id="clService"></label>
+          <label>Contract Value<input id="clContractValue" type="number" min="0" step="0.01"></label>
+          <label>Start Date<input id="clStartDate" type="date"></label>
+          <label>Status<select id="clStatus"><option>Active</option><option>Inactive</option><option>On Hold</option><option>Completed</option></select></label>
+          <label class="full">Notes<textarea id="clNotes" rows="3"></textarea></label>
+        </div>
+        <div id="clientFormError" class="form-error"></div>
+        <div class="modal-actions"><button type="button" class="btn secondary-btn" id="clientCancel">Cancel</button><button type="submit" class="btn primary-btn" id="clientSave">Save Client</button></div>
+      </form>
+    </div>
+  </div>
+
   <div id="teamModal" class="modal-backdrop" aria-hidden="true">
     <div class="modal-card">
       <div class="modal-head"><div><h3 id="teamModalTitle">Add Team Member</h3><div class="muted">Changes are saved to Google Sheets.</div></div><button class="modal-close" id="teamModalClose" type="button">×</button></div>
@@ -324,8 +348,10 @@
     setTable('prospectsTable',prospects,r =>
       '<tr><td><span class="mini-title">'+esc(r.Name)+'</span></td><td>'+esc(r.Business)+'</td><td>'+contact(r)+'</td><td>'+esc(r.Service)+'</td><td>'+esc(r.Source)+'</td><td>'+money(r.Quote)+'</td><td>'+statusBadge(r.Status)+'</td><td>'+esc(formatDateOnly(r['Follow-up Date']))+'</td><td>'+ (isAdminMode ? '<button class="action-btn" type="button" data-prospect-edit="'+esc(r['Prospect ID'])+'">Edit</button><button class="action-btn" type="button" data-prospect-delete="'+esc(r['Prospect ID'])+'">Delete</button>' : '<span class="muted">View only</span>') +'</td></tr>',10,'prospectsMeta');
 
-    setTable('clientsTable',clients,r =>
-      '<tr><td><span class="mini-title">'+esc(r.Name)+'</span></td><td>'+esc(r.Business)+'</td><td>'+contact(r)+'</td><td>'+esc(r.Service)+'</td><td>'+money(r['Contract Value'])+'</td><td>'+esc(formatDateOnly(r['Start Date']))+'</td><td>'+statusBadge(r.Status)+'</td></tr>',7,'clientsMeta');
+    setTable('clientsTable',clients,r => {
+      const id=clientId(r);
+      return '<tr><td><span class="mini-title">'+esc(r.Name)+'</span><span class="subtext">'+esc(id)+'</span></td><td>'+esc(r.Business)+'</td><td>'+contact(r)+'</td><td>'+esc(r.Service)+'</td><td>'+money(r['Contract Value'])+'</td><td>'+esc(formatDateOnly(r['Start Date']))+'</td><td>'+statusBadge(r.Status)+'</td><td class="project-actions"><button class="action-btn" type="button" data-client-edit="'+esc(id)+'">Edit</button><button class="action-btn" type="button" data-client-delete="'+esc(id)+'">Delete</button></td></tr>';
+    },8,'clientsMeta');
 
     setTable('projectsTable',projects,r =>
       '<tr><td><span class="mini-title">'+esc(r['Project Name'])+'</span><span class="subtext">'+esc(r['Project ID'])+'</span></td><td>'+esc(r.clientBusiness || r.clientName || r['Client ID'])+'</td><td>'+esc(r.Service)+'</td><td>'+esc(formatDateOnly(r['Start Date']))+'</td><td>'+esc(formatDateOnly(r.Deadline))+'</td><td>'+statusBadge(r.Status)+'</td><td>'+statusBadge(r.Priority)+'</td><td>'+esc(r.Manager)+'</td><td class="project-actions">'+(isAdminMode ? '<button class="action-btn" type="button" data-project-edit="'+esc(r['Project ID'])+'">Edit</button><button class="action-btn" type="button" data-project-delete="'+esc(r['Project ID'])+'">Delete</button>' : '<span class="muted">View only</span>')+'</td></tr>',9,'projectsMeta');
@@ -583,6 +609,74 @@
     });
   }
 
+
+  function currentClientRows(){
+    const source=window.__dashboardData?.data||{};
+    return Array.isArray(source.clients) ? source.clients : rowsOf(window.__dashboardData?.clientsData);
+  }
+  function clientId(r){ return r?.['Client ID']||r?.id||r?.ID||''; }
+  function openClientModal(record){
+    if(!isAdminMode){alert('Enable Admin Mode to manage clients.');return;}
+    document.getElementById('clientModalTitle').textContent=record?'Edit Client':'Add Client';
+    document.getElementById('clientId').value=clientId(record)||'';
+    document.getElementById('clProspectId').value=record?.['Prospect ID']||'';
+    document.getElementById('clName').value=record?.Name||'';
+    document.getElementById('clBusiness').value=record?.Business||'';
+    document.getElementById('clPhone').value=record?.Phone||'';
+    document.getElementById('clEmail').value=record?.Email||'';
+    document.getElementById('clService').value=record?.Service||'';
+    document.getElementById('clContractValue').value=record?.['Contract Value']??'';
+    document.getElementById('clStartDate').value=isoInputDate(record?.['Start Date']);
+    document.getElementById('clStatus').value=record?.Status||'Active';
+    document.getElementById('clNotes').value=record?.Notes||'';
+    document.getElementById('clientFormError').style.display='none';
+    document.getElementById('clientModal').classList.add('open');
+  }
+  function closeClientModal(){document.getElementById('clientModal').classList.remove('open')}
+  async function mutateClient(action,payload){
+    if(!isAdminMode) throw new Error('Admin Mode is required for client changes.');
+    const adminToken=localStorage.getItem(ADMIN_TOKEN_KEY)||'';
+    const response=await fetch('/api/mutate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({entity:'client',action,payload,adminToken})});
+    const result=await response.json().catch(()=>({}));
+    if(!response.ok||result.ok===false) throw new Error(result.error||'Unable to save client');
+    return result;
+  }
+  async function saveClient(e){
+    e.preventDefault();
+    if(!isAdminMode){alert('Enable Admin Mode to manage clients.');return;}
+    const btn=document.getElementById('clientSave'),err=document.getElementById('clientFormError');
+    btn.disabled=true;btn.textContent='Saving...';err.style.display='none';
+    const editing=Boolean(document.getElementById('clientId').value.trim());
+    const payload={
+      clientId:editing?document.getElementById('clientId').value.trim():'',
+      prospectId:document.getElementById('clProspectId').value.trim(),
+      name:document.getElementById('clName').value.trim(),
+      business:document.getElementById('clBusiness').value.trim(),
+      phone:document.getElementById('clPhone').value.trim(),
+      email:document.getElementById('clEmail').value.trim(),
+      service:document.getElementById('clService').value.trim(),
+      contractValue:document.getElementById('clContractValue').value,
+      startDate:document.getElementById('clStartDate').value,
+      status:document.getElementById('clStatus').value,
+      notes:document.getElementById('clNotes').value.trim()
+    };
+    try{await mutateClient(editing?'update':'create',payload);closeClientModal();await refreshDashboard()}
+    catch(e){err.textContent=e.message;err.style.display='block'}
+    finally{btn.disabled=false;btn.textContent='Save Client'}
+  }
+  function bindClientActions(){
+    document.querySelectorAll('[data-client-edit]').forEach(b=>b.onclick=()=>{
+      const r=currentClientRows().find(x=>String(clientId(x))===String(b.dataset.clientEdit));
+      if(r) openClientModal(r);
+    });
+    document.querySelectorAll('[data-client-delete]').forEach(b=>b.onclick=async()=>{
+      if(!isAdminMode){alert('Enable Admin Mode to delete clients.');return;}
+      const r=currentClientRows().find(x=>String(clientId(x))===String(b.dataset.clientDelete));
+      if(!r||!confirm('Delete client '+(r.Name||b.dataset.clientDelete)+'? This removes the row from Google Sheets.')) return;
+      b.disabled=true;
+      try{await mutateClient('delete',{clientId:b.dataset.clientDelete});await refreshDashboard()}catch(e){alert(e.message)}finally{b.disabled=false}
+    });
+  }
 
   function currentTeamRows(){
     const source=window.__dashboardData?.data||{};
@@ -939,6 +1033,11 @@
   document.getElementById('teamModalClose').addEventListener('click',closeTeamModal);
   document.getElementById('teamCancel').addEventListener('click',closeTeamModal);
   document.getElementById('teamModal').addEventListener('click',e=>{if(e.target.id==='teamModal')closeTeamModal()});
+  document.getElementById('clientForm').addEventListener('submit',saveClient);
+  document.getElementById('addClientBtn').addEventListener('click',()=>openClientModal());
+  document.getElementById('clientModalClose').addEventListener('click',closeClientModal);
+  document.getElementById('clientCancel').addEventListener('click',closeClientModal);
+  document.getElementById('clientModal').addEventListener('click',e=>{if(e.target.id==='clientModal')closeClientModal()});
   document.getElementById('prospectModalClose').addEventListener('click',closeProspectModal);
   document.getElementById('prospectCancel').addEventListener('click',closeProspectModal);
   document.getElementById('prospectForm').addEventListener('submit',saveProspect);
