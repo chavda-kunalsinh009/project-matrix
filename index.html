@@ -22,7 +22,7 @@
     .admin-toggle:focus-within .toggle-track{box-shadow:0 0 0 3px rgba(255,255,255,.2)}
     .admin-state{font-size:11px;opacity:.9}
     .dot{width:8px;height:8px;border-radius:50%;background:#35d07f}
-    main{max-width:1400px;margin:0 auto;padding:28px}
+    main{max-width:1400px;margin:0 0 0 238px;padding:28px 32px}
     .title-row{display:flex;justify-content:space-between;align-items:end;margin-bottom:20px}
     h2{margin:0;font-size:24px}.muted{color:#718096;font-size:13px}
     .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:18px}
@@ -37,9 +37,10 @@
     .section-head{padding:17px 20px;background:linear-gradient(180deg,#fff,#f8faff);border-bottom:1px solid #edf1f6;font-weight:700}
     .table-wrap{overflow:auto}.table{width:100%;border-collapse:collapse;min-width:700px}.table th,.table td{text-align:left;padding:14px 18px;border-bottom:1px solid #edf1f6;font-size:13px}.table th{color:#667085;background:#f8fafc;font-weight:650}.table tr:hover td{background:#fafcff}
     .notes{padding:20px;border-left:5px solid #4f46e5;min-height:70px;color:#4b5563}
-    .data-nav{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 18px}
-    .data-nav button{border:1px solid #dfe6f0;background:#fff;color:#4b5563;border-radius:999px;padding:8px 13px;font-size:12px;font-weight:650;cursor:pointer}
-    .data-nav button:hover,.data-nav button.active{background:#eef3ff;border-color:#cbd8ff;color:#315efb}
+    .data-nav{position:fixed;left:0;top:0;bottom:0;width:238px;background:#111c44;padding:96px 14px 20px;display:flex;flex-direction:column;gap:6px;overflow-y:auto;z-index:20;box-shadow:8px 0 28px rgba(17,28,68,.12)}
+    .data-nav:before{content:"PROJECT MATRIX";position:absolute;top:28px;left:22px;color:#fff;font-size:15px;font-weight:800;letter-spacing:.6px}
+    .data-nav button{width:100%;border:1px solid transparent;background:transparent;color:rgba(255,255,255,.72);border-radius:10px;padding:11px 13px;font-size:12px;font-weight:650;cursor:pointer;text-align:left;transition:.18s}
+    .data-nav button:hover,.data-nav button.active{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.12);color:#fff}
     .data-section{scroll-margin-top:20px}
     .section-meta{font-weight:500;color:#8994a6;font-size:12px;margin-left:8px}
     .badge{display:inline-block;padding:5px 9px;border-radius:999px;background:#eef3ff;color:#315efb;border:1px solid #dbe7ff;font-size:11px;font-weight:650}
@@ -54,8 +55,8 @@
     footer{text-align:center;padding:18px;color:#8490a3;font-size:12px}
     #loading{position:fixed;inset:0;background:rgba(245,248,252,.9);display:none;align-items:center;justify-content:center;z-index:10;font-weight:650}
     #error{display:none;background:#fff1f2;color:#9f1239;border:1px solid #fecdd3;padding:14px 16px;border-radius:12px;margin-bottom:18px}
-    @media(max-width:900px){.grid{grid-template-columns:repeat(2,1fr)}.secondary{grid-template-columns:1fr}.system{grid-template-columns:1fr}}
-    @media(max-width:600px){header{padding:20px}.header-inner{align-items:flex-start;flex-direction:column}main{padding:20px}.grid{grid-template-columns:1fr}.value{font-size:27px}.title-row{align-items:flex-start;flex-direction:column;gap:6px}}
+    @media(max-width:900px){.data-nav{position:static;width:100%;height:auto;padding:10px;display:flex;flex-direction:row;overflow-x:auto;border-radius:12px;margin:0 0 18px}.data-nav:before{display:none}.data-nav button{width:auto;white-space:nowrap;text-align:center;background:#fff;color:#4b5563;border:1px solid #dfe6f0;border-radius:999px}.data-nav button:hover,.data-nav button.active{background:#eef3ff;border-color:#cbd8ff;color:#315efb}.grid{grid-template-columns:repeat(2,1fr)}.secondary{grid-template-columns:1fr}.system{grid-template-columns:1fr}main{margin:0;padding:20px}}
+    @media(max-width:600px){header{padding:20px}.title-row{width:100%}.header-inner{align-items:flex-start;flex-direction:column}main{padding:20px}.grid{grid-template-columns:1fr}.value{font-size:27px}.title-row{align-items:flex-start;flex-direction:column;gap:6px}}
   
     .prospect-toolbar{display:flex;justify-content:flex-end;padding:12px 18px;border-bottom:1px solid #edf1f6}
     .btn{border:0;border-radius:9px;padding:9px 14px;font-size:12px;font-weight:700;cursor:pointer}
@@ -80,8 +81,8 @@
   <input id="adminModeBtn" type="checkbox" aria-label="Admin Mode">
   <span class="toggle-track"></span>
 </label></div></div></header>
-<main>
-  <div class="title-row"><div><h2>Project Matrix Overview</h2><div class="muted" id="updated">Last updated: —</div></div></div>
+<main id="dashboardTop">
+  <div class="title-row"><div><h2>Project Matrix Overview</h2><div class="muted" id="updated">Last updated: —</div></div><button class="btn secondary-btn" id="refreshBtn" type="button">↻ Refresh</button></div>
   <div id="error"></div>
   <div class="grid">
     <div class="card kpi"><div class="label">Total Prospects</div><div class="value" id="leads">0</div></div>
@@ -105,8 +106,9 @@
     <div class="sys">Team Members<b id="team">0</b></div>
   </div></div>
 
-  <div class="data-nav" id="dataNav">
-    <button class="active" data-target="prospectsSection">Prospects</button>
+  <aside class="data-nav" id="dataNav" aria-label="Project Matrix navigation">
+    <button class="active" data-target="dashboardTop">Dashboard</button>
+    <button data-target="prospectsSection">Prospects</button>
     <button data-target="clientsSection">Clients</button>
     <button data-target="projectsSection">Projects</button>
     <button data-target="tasksSection">Tasks</button>
@@ -116,7 +118,7 @@
     <button data-target="activitiesSection">Activities</button>
     <button data-target="followupsSection">Follow-ups</button>
     <button data-target="documentsSection">Documents</button>
-  </div>
+  </aside>
 
   <div class="section data-section" id="prospectsSection">
     <div class="section-head">Prospects <span class="section-meta" id="prospectsMeta">0 records</span></div>
@@ -566,6 +568,8 @@
     });
   });
 
+  document.getElementById('refreshBtn').addEventListener('click', function(){ refreshDashboard(); });
+  
   // Show the dashboard immediately. If cached data exists, display it now.
   // Fresh Google Sheets data is fetched in the background and replaces it
   // automatically when available.
