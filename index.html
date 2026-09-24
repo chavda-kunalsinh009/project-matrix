@@ -333,7 +333,7 @@
     if((action==='update' || action==='delete') && !isAdminMode){
       throw new Error('Admin Mode is required for this action.');
     }
-    const adminToken = sessionStorage.getItem(ADMIN_TOKEN_KEY) || '';
+    const adminToken = localStorage.getItem(ADMIN_TOKEN_KEY) || '';
     const response = await fetch('/api/mutate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({entity:'prospect',action,payload,adminToken})});
     const result = await response.json().catch(()=>({}));
     if(!response.ok || result.ok === false) throw new Error(result.error || 'Unable to save prospect');
@@ -468,7 +468,7 @@
     const response = await fetch('/api/admin',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({action,pin,adminToken:sessionStorage.getItem(ADMIN_TOKEN_KEY)||''})
+      body:JSON.stringify({action,pin,adminToken:localStorage.getItem(ADMIN_TOKEN_KEY)||''})
     });
     const result = await response.json().catch(()=>({}));
     if(!response.ok || result.ok === false) throw new Error(result.error || 'Admin authentication failed');
@@ -500,7 +500,7 @@
     btn.disabled=true; btn.textContent='Verifying...'; err.style.display='none';
     try{
       const result=await adminRequest('login',document.getElementById('adminPin').value);
-      sessionStorage.setItem(ADMIN_TOKEN_KEY,result.adminToken);
+      localStorage.setItem(ADMIN_TOKEN_KEY,result.adminToken);
       isAdminMode=true;
       closeAdminModal();
       updateAdminUI();
@@ -516,7 +516,7 @@
 
   async function disableAdminMode(){
     try{ await adminRequest('logout'); }catch(e){}
-    sessionStorage.removeItem(ADMIN_TOKEN_KEY);
+    localStorage.removeItem(ADMIN_TOKEN_KEY);
     isAdminMode=false;
     closeProspectModal();
     updateAdminUI();
@@ -524,14 +524,14 @@
   }
 
   async function verifyAdminSession(){
-    const token=sessionStorage.getItem(ADMIN_TOKEN_KEY);
+    const token=localStorage.getItem(ADMIN_TOKEN_KEY);
     if(!token){ updateAdminUI(); return; }
     try{
       const result=await adminRequest('verify');
       isAdminMode=!!result.valid;
-      if(!isAdminMode) sessionStorage.removeItem(ADMIN_TOKEN_KEY);
+      if(!isAdminMode) localStorage.removeItem(ADMIN_TOKEN_KEY);
     }catch(e){
-      sessionStorage.removeItem(ADMIN_TOKEN_KEY);
+      localStorage.removeItem(ADMIN_TOKEN_KEY);
       isAdminMode=false;
     }
     updateAdminUI();
