@@ -13,9 +13,13 @@
     h1{margin:0;font-size:28px}.subtitle{margin:5px 0 0;opacity:.82;font-size:14px}
     .connection{display:flex;align-items:center;gap:8px;padding:9px 13px;border:1px solid rgba(255,255,255,.25);border-radius:999px;background:rgba(255,255,255,.12);font-size:13px}
     .header-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-    .admin-btn{border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.12);color:#fff;border-radius:9px;padding:9px 13px;font-size:12px;font-weight:700;cursor:pointer}
-    .admin-btn:hover{background:rgba(255,255,255,.2)}
-    .admin-btn.active{background:#fff;color:#1f3fb8;border-color:#fff}
+    .admin-toggle{display:inline-flex;align-items:center;gap:9px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;user-select:none}
+    .admin-toggle input{position:absolute;opacity:0;pointer-events:none}
+    .toggle-track{position:relative;width:44px;height:24px;border-radius:999px;background:rgba(255,255,255,.25);border:1px solid rgba(255,255,255,.35);transition:.2s}
+    .toggle-track:after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+    .admin-toggle input:checked + .toggle-track{background:#35d07f;border-color:#35d07f}
+    .admin-toggle input:checked + .toggle-track:after{transform:translateX(20px)}
+    .admin-toggle:focus-within .toggle-track{box-shadow:0 0 0 3px rgba(255,255,255,.2)}
     .admin-state{font-size:11px;opacity:.9}
     .dot{width:8px;height:8px;border-radius:50%;background:#35d07f}
     main{max-width:1400px;margin:0 auto;padding:28px}
@@ -71,7 +75,11 @@
 <body>
 <div id="loading">Loading Project Matrix...</div>
 <div class="app">
-<header><div class="header-inner"><div><h1>Project Matrix</h1><div class="subtitle">Business &amp; Project Management</div></div><div class="header-actions"><div class="connection"><span class="dot"></span>Connected to Google Sheets</div><button class="admin-btn" id="adminModeBtn" type="button">Admin Mode</button></div></div></header>
+<header><div class="header-inner"><div><h1>Project Matrix</h1><div class="subtitle">Business &amp; Project Management</div></div><div class="header-actions"><div class="connection"><span class="dot"></span>Connected to Google Sheets</div><label class="admin-toggle" title="Turn Admin Mode on or off">
+  <span>Admin Mode</span>
+  <input id="adminModeBtn" type="checkbox" aria-label="Admin Mode">
+  <span class="toggle-track"></span>
+</label></div></div></header>
 <main>
   <div class="title-row"><div><h2>Project Matrix Overview</h2><div class="muted" id="updated">Last updated: —</div></div></div>
   <div id="error"></div>
@@ -468,15 +476,11 @@
   function updateAdminUI(){
     const btn=document.getElementById('adminModeBtn');
     const state=document.getElementById('prospectPermissionState');
-    if(isAdminMode){
-      btn.textContent='Admin Mode: ON';
-      btn.classList.add('active');
-      state.textContent='Admin access enabled · Edit/Delete available';
-    }else{
-      btn.textContent='Admin Mode';
-      btn.classList.remove('active');
-      state.textContent='Add is available to all users · Edit/Delete require Admin Mode';
-    }
+    btn.checked=isAdminMode;
+    btn.setAttribute('aria-checked',String(isAdminMode));
+    state.textContent=isAdminMode
+      ? 'Admin access enabled · Edit/Delete available'
+      : 'Add is available to all users · Edit/Delete require Admin Mode';
   }
 
   function openAdminModal(){
@@ -535,8 +539,12 @@
     }
   }
 
-  document.getElementById('adminModeBtn').addEventListener('click',()=>{
-    if(isAdminMode) disableAdminMode(); else openAdminModal();
+  document.getElementById('adminModeBtn').addEventListener('change',e=>{
+    if(e.target.checked){
+      openAdminModal();
+    }else{
+      disableAdminMode();
+    }
   });
   document.getElementById('adminModalClose').addEventListener('click',closeAdminModal);
   document.getElementById('adminCancel').addEventListener('click',closeAdminModal);
