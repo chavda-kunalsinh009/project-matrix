@@ -499,6 +499,7 @@
       closeAdminModal();
       updateAdminUI();
       renderDataTables(window.__dashboardData || {});
+      bindProspectActions();
     }catch(e){
       err.textContent=e.message;
       err.style.display='block';
@@ -528,7 +529,10 @@
       isAdminMode=false;
     }
     updateAdminUI();
-    if(window.__dashboardData) renderDataTables(window.__dashboardData);
+    if(window.__dashboardData){
+      renderDataTables(window.__dashboardData);
+      bindProspectActions();
+    }
   }
 
   document.getElementById('adminModeBtn').addEventListener('click',()=>{
