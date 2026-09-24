@@ -85,13 +85,13 @@
 <main id="dashboardTop">
   <div class="title-row"><div><h2>Project Matrix Overview</h2><div class="muted" id="updated">Last updated: —</div></div><button class="btn secondary-btn" id="refreshBtn" type="button">↻ Refresh</button></div>
   <div id="error"></div>
-  <div class="grid admin-dashboard-block">
+  <div class="grid admin-only">
     <div class="card kpi"><div class="label">Total Prospects</div><div class="value" id="leads">0</div></div>
     <div class="card kpi"><div class="label">Total Clients</div><div class="value" id="clients">0</div></div>
     <div class="card kpi"><div class="label">Revenue</div><div class="value" id="revenue">₹0</div></div>
     <div class="card kpi"><div class="label">Pending Revenue</div><div class="value" id="pending">₹0</div></div>
   </div>
-  <div class="secondary admin-dashboard-block">
+  <div class="secondary admin-only">
     <div class="card"><div class="label">Payment Collection</div><div class="value" id="collection">0.0%</div><div class="progress"><div class="bar" id="collectionBar"></div></div></div>
     <div class="card"><div class="label">Conversion Rate</div><div class="value" id="conversion">0.0%</div><div class="progress"><div class="bar" id="conversionBar"></div></div></div>
     <div class="card"><div class="label">Activity Overview</div><div class="value" id="activity">0</div><div class="muted">Tasks + team activity</div></div>
@@ -122,13 +122,13 @@
     <button class="admin-only" data-role="admin" data-target="documentsSection">Documents</button>
   </aside>
 
-  <div class="section data-section" id="prospectsSection" class="section data-section admin-only">
+  <div class="section data-section admin-only" id="prospectsSection">
     <div class="section-head">Prospects <span class="section-meta" id="prospectsMeta">0 records</span></div>
     <div class="prospect-toolbar"><span class="admin-state" id="prospectPermissionState"></span><button class="btn primary-btn" id="addProspectBtn" type="button">+ Add Prospect</button></div>
     <div class="table-wrap"><table class="table"><thead><tr><th>Name</th><th>Business</th><th>Contact</th><th>Service</th><th>Source</th><th>Quote</th><th>Status</th><th>Follow-up</th><th>Actions</th></tr></thead><tbody id="prospectsTable"></tbody></table></div>
   </div>
 
-  <div class="section data-section" id="clientsSection" class="section data-section admin-only">
+  <div class="section data-section admin-only" id="clientsSection">
     <div class="section-head">Clients <span class="section-meta" id="clientsMeta">0 records</span></div>
     <div class="table-wrap"><table class="table"><thead><tr><th>Client</th><th>Business</th><th>Contact</th><th>Service</th><th>Contract</th><th>Start Date</th><th>Status</th></tr></thead><tbody id="clientsTable"></tbody></table></div>
   </div>
@@ -149,27 +149,27 @@
     <div class="table-wrap"><table class="table"><thead><tr><th>Name</th><th>Role</th><th>Contact</th><th>Joining Date</th><th>Status</th></tr></thead><tbody id="teamTable"></tbody></table></div>
   </div>
 
-  <div class="section data-section" id="invoicesSection" class="section data-section admin-only">
+  <div class="section data-section admin-only" id="invoicesSection">
     <div class="section-head">Invoices <span class="section-meta" id="invoicesMeta">0 records</span></div>
     <div class="table-wrap"><table class="table"><thead><tr><th>Invoice</th><th>Client</th><th>Project</th><th>Invoice Date</th><th>Due Date</th><th>Amount</th><th>Paid</th><th>Balance</th><th>Status</th></tr></thead><tbody id="invoicesTable"></tbody></table></div>
   </div>
 
-  <div class="section data-section" id="paymentsSection" class="section data-section admin-only">
+  <div class="section data-section admin-only" id="paymentsSection">
     <div class="section-head">Payments <span class="section-meta" id="paymentsMeta">0 records</span></div>
     <div class="table-wrap"><table class="table"><thead><tr><th>Payment</th><th>Client</th><th>Project</th><th>Invoice</th><th>Date</th><th>Amount</th><th>Method</th><th>Status</th></tr></thead><tbody id="paymentsTable"></tbody></table></div>
   </div>
 
-  <div class="section data-section" id="activitiesSection" class="section data-section admin-only">
+  <div class="section data-section admin-only" id="activitiesSection">
     <div class="section-head">Activities <span class="section-meta" id="activitiesMeta">0 records</span></div>
     <div class="table-wrap"><table class="table"><thead><tr><th>Type</th><th>Client</th><th>Project</th><th>Date</th><th>Description</th><th>User</th></tr></thead><tbody id="activitiesTable"></tbody></table></div>
   </div>
 
-  <div class="section data-section" id="followupsSection" class="section data-section admin-only">
+  <div class="section data-section admin-only" id="followupsSection">
     <div class="section-head">Follow-ups <span class="section-meta" id="followupsMeta">0 records</span></div>
     <div class="table-wrap"><table class="table"><thead><tr><th>Prospect</th><th>Client</th><th>Date</th><th>Type</th><th>Purpose</th><th>Status</th><th>Next Follow-up</th></tr></thead><tbody id="followupsTable"></tbody></table></div>
   </div>
 
-  <div class="section data-section" id="documentsSection" class="section data-section admin-only">
+  <div class="section data-section admin-only" id="documentsSection">
     <div class="section-head">Documents <span class="section-meta" id="documentsMeta">0 records</span></div>
     <div class="table-wrap"><table class="table"><thead><tr><th>Document</th><th>Type</th><th>Client</th><th>Project</th><th>Date</th><th>File</th><th>Notes</th></tr></thead><tbody id="documentsTable"></tbody></table></div>
   </div>
@@ -194,16 +194,16 @@
     <div class="modal-card">
       <div class="modal-head"><div><h3 id="projectModalTitle">Add Project</h3><div class="muted">Changes are saved to Google Sheets.</div></div><button class="modal-close" id="projectModalClose" type="button">×</button></div>
       <form id="projectForm">
-        <input type="hidden" id="projectId"><datalist id="projectClientOptions"></datalist><datalist id="projectManagerOptions"></datalist>
+        <input type="hidden" id="projectId">
         <div class="form-grid">
-          <label>Client<input id="prClientId" required list="projectClientOptions" placeholder="Select client ID"></label>
+          <label>Client<select id="prClientId" required></select></label>
           <label>Project Name<input id="prName" required></label>
           <label>Service<input id="prService"></label>
           <label>Start Date<input id="prStartDate" type="date"></label>
           <label>Deadline<input id="prDeadline" type="date"></label>
           <label>Status<select id="prStatus"><option>Not Started</option><option>Planning</option><option>In Progress</option><option>On Hold</option><option>Completed</option><option>Cancelled</option></select></label>
           <label>Priority<select id="prPriority"><option>Low</option><option>Medium</option><option>High</option><option>Urgent</option></select></label>
-          <label>Manager<input id="prManager" list="projectManagerOptions" placeholder="Select manager"></label>
+          <label>Manager<select id="prManager"></select></label>
           <label class="full">Notes<textarea id="prNotes" rows="3"></textarea></label>
         </div>
         <div id="projectFormError" class="form-error"></div>
@@ -367,33 +367,36 @@
     if(!response.ok || result.ok === false) throw new Error(result.error || 'Unable to save project');
     return result;
   }
-  function populateProjectOptions(){
+  function populateProjectOptions(selectedClientId='',selectedManager=''){
     const source=window.__dashboardData?.data||{};
     const clients=Array.isArray(source.clients)?source.clients:[];
     const team=Array.isArray(source.team)?source.team:[];
-    const clientList=document.getElementById('projectClientOptions');
-    const managerList=document.getElementById('projectManagerOptions');
-    if(clientList){
-      clientList.innerHTML=clients.map(r=>{
+    const clientSelect=document.getElementById('prClientId');
+    const managerSelect=document.getElementById('prManager');
+
+    if(clientSelect){
+      clientSelect.innerHTML='<option value="">Select client</option>'+clients.map(r=>{
         const id=r['Client ID']||r.ClientID||r.client_id||r.ID||r.id||'';
         const name=r.Name||r['Client Name']||r.name||id;
-        return id ? '<option value="'+esc(id)+'">'+esc(name)+'</option>' : '';
+        return id ? '<option value="'+esc(id)+'">'+esc(name)+' ('+esc(id)+')</option>' : '';
       }).join('');
+      clientSelect.value=selectedClientId||'';
     }
-    if(managerList){
-      managerList.innerHTML=team.map(r=>{
+
+    if(managerSelect){
+      managerSelect.innerHTML='<option value="">Unassigned</option>'+team.map(r=>{
         const id=r['Team ID']||r.TeamID||r['Team Member ID']||r.TeamMemberID||r['Member ID']||r.MemberID||r.id||r.ID||'';
         const name=r.Name||r['Team Name']||r['Member Name']||r.name||id;
         return id ? '<option value="'+esc(id)+'">'+esc(name)+'</option>' : '';
       }).join('');
+      managerSelect.value=selectedManager||'';
     }
   }
 
   function openProjectModal(record){
     document.getElementById('projectModalTitle').textContent=record?'Edit Project':'Add Project';
     document.getElementById('projectId').value=record?.['Project ID']||'';
-    populateProjectOptions();
-    document.getElementById('prClientId').value=record?.['Client ID']||'';
+    populateProjectOptions(record?.['Client ID']||'',record?.Manager||'');
     document.getElementById('prName').value=record?.['Project Name']||'';
     document.getElementById('prService').value=record?.Service||'';
     document.getElementById('prStartDate').value=isoInputDate(record?.['Start Date']);
