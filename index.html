@@ -230,10 +230,19 @@
   }
 
   function renderDataTables(data){
-    const prospects=rowsOf(data.prospectsData), clients=rowsOf(data.clientsData), projects=rowsOf(data.projectsData);
-    const tasks=rowsOf(data.tasksData), team=rowsOf(data.teamData), invoices=rowsOf(data.invoicesData);
-    const payments=rowsOf(data.paymentsData), activities=rowsOf(data.activitiesData), followups=rowsOf(data.followUpsData);
-    const documents=rowsOf(data.documentsData);
+    // The live dashboard API returns the full datasets inside data.data.
+    // Keep a small compatibility layer so older payload shapes also continue to work.
+    const source = data.data || {};
+    const prospects=Array.isArray(source.prospects) ? source.prospects : rowsOf(data.prospectsData);
+    const clients=Array.isArray(source.clients) ? source.clients : rowsOf(data.clientsData);
+    const projects=Array.isArray(source.projects) ? source.projects : rowsOf(data.projectsData);
+    const tasks=Array.isArray(source.tasks) ? source.tasks : rowsOf(data.tasksData);
+    const team=Array.isArray(source.team) ? source.team : rowsOf(data.teamData);
+    const invoices=Array.isArray(source.invoices) ? source.invoices : rowsOf(data.invoicesData);
+    const payments=Array.isArray(source.payments) ? source.payments : rowsOf(data.paymentsData);
+    const activities=Array.isArray(source.activities) ? source.activities : rowsOf(data.activitiesData);
+    const followups=Array.isArray(source.followUps) ? source.followUps : rowsOf(data.followUpsData);
+    const documents=Array.isArray(source.documents) ? source.documents : rowsOf(data.documentsData);
 
     setTable('prospectsTable',prospects,r =>
       '<tr><td><span class="mini-title">'+esc(r.Name)+'</span></td><td>'+esc(r.Business)+'</td><td>'+contact(r)+'</td><td>'+esc(r.Service)+'</td><td>'+esc(r.Source)+'</td><td>'+money(r.Quote)+'</td><td>'+statusBadge(r.Status)+'</td><td>'+esc(r['Follow-up Date'])+'</td><td>'+ (isAdminMode ? '<button class="action-btn" type="button" data-prospect-edit="'+esc(r['Prospect ID'])+'">Edit</button><button class="action-btn" type="button" data-prospect-delete="'+esc(r['Prospect ID'])+'">Delete</button>' : '<span class="muted">View only</span>') +'</td></tr>',10,'prospectsMeta');
@@ -268,21 +277,34 @@
 
   function render(data){
     window.__dashboardData=data;
-    document.getElementById('leads').textContent = data.leads || 0;
-    document.getElementById('clients').textContent = data.clients || 0;
-    document.getElementById('revenue').textContent = money(data.revenue);
-    document.getElementById('pending').textContent = money(data.pendingRevenue);
-    document.getElementById('collection').textContent = pct(data.paymentCollection);
-    document.getElementById('conversion').textContent = pct(data.conversionRate);
-    document.getElementById('activity').textContent = (data.tasks || 0) + (data.team || 0);
-    document.getElementById('payments').textContent = data.payments || 0;
-    document.getElementById('tasks').textContent = data.tasks || 0;
-    document.getElementById('team').textContent = data.team || 0;
-    document.getElementById('collectionBar').style.width = Math.min(100,Math.max(0,Number(data.paymentCollection||0))) + '%';
-    document.getElementById('conversionBar').style.width = Math.min(100,Math.max(0,Number(data.conversionRate||0))) + '%';
-    document.getElementById('notes').textContent = data.ownerNotes || 'No owner notes have been added yet.';
+    const stats = data.stats || {};
+    const source = data.data || {};
+    const prospectRows = Array.isArray(source.prospects) ? source.prospects : [];
+    
+    // Use numeric values from the API's stats object.
+    const prospectCount = Number(stats.prospects ?? data.leads ?? prospectRows.length ?? 0);
+    const clientCount = Number(stats.clients ?? data.clients ?? (Array.isArray(source.clients) ? source.clients.length : 0));
+    const taskCount = Number(stats.tasks ?? (Array.isArray(source.tasks) ? source.tasks.length : 0));
+    const teamCount = Number(stats.team ?? (Array.isArray(source.team) ? source.team.length : 0));
+    const paymentCount = Number(stats.payments ?? (Array.isArray(source.payments) ? source.payments.length : 0));
 
-    const rows = data.recentLeads || [];
+    document.getElementById('leads').textContent = prospectCount;
+    document.getElementById('clients').textContent = clientCount;
+    document.getElementById('revenue').textContent = money(stats.revenue ?? data.revenue);
+    document.getElementById('pending').textContent = money(stats.pendingRevenue ?? data.pendingRevenue);
+    document.getElementById('collection').textContent = pct(stats.paymentCollection ?? data.paymentCollection);
+    document.getElementById('conversion').textContent = pct(stats.conversionRate ?? data.conversionRate);
+    document.getElementById('activity').textContent = taskCount + teamCount;
+    document.getElementById('payments').textContent = paymentCount;
+    document.getElementById('tasks').textContent = taskCount;
+    document.getElementById('team').textContent = teamCount;
+    document.getElementById('collectionBar').style.width = Math.min(100,Math.max(0,Number(stats.paymentCollection ?? data.paymentCollection ?? 0))) + '%';
+    document.getElementById('conversionBar').style.width = Math.min(100,Math.max(0,Number(stats.conversionRate ?? data.conversionRate ?? 0))) + '%';
+    
+    const notes = Array.isArray(data.ownerNotes) ? data.ownerNotes.join(' • ') : (data.ownerNotes || '');
+    document.getElementById('notes').textContent = notes || 'No owner notes have been added yet.';
+
+    const rows = Array.isArray(data.recentLeads) ? data.recentLeads : prospectRows;
     document.getElementById('leadsTable').innerHTML = rows.length ? rows.map(r =>
       '<tr><td>'+esc(r.name)+'</td><td>'+esc(r.business)+'</td><td>'+esc(r.service)+'</td><td>'+money(r.quote)+'</td><td>'+statusBadge(r.status)+'</td><td>'+esc(r.followUp)+'</td></tr>'
     ).join('') : '<tr><td colspan="6">No prospects found.</td></tr>';
@@ -332,7 +354,11 @@
     document.getElementById('prospectModal').classList.add('open');
   }
   function closeProspectModal(){document.getElementById('prospectModal').classList.remove('open')}
-  function currentProspects(){return rowsOf(window.__dashboardData?.prospectsData)}
+  function currentProspects(){
+    const source = window.__dashboardData?.data || {};
+    if(Array.isArray(source.prospects)) return source.prospects;
+    return rowsOf(window.__dashboardData?.prospectsData);
+  }
   async function saveProspect(e){
     e.preventDefault();
     const btn=document.getElementById('prospectSave'), err=document.getElementById('prospectFormError');
