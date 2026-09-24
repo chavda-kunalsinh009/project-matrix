@@ -178,7 +178,8 @@
 
   <div class="section data-section admin-only" id="documentsSection">
     <div class="section-head">Documents <span class="section-meta" id="documentsMeta">0 records</span></div>
-    <div class="table-wrap"><table class="table"><thead><tr><th>Document</th><th>Type</th><th>Client</th><th>Project</th><th>Date</th><th>File</th><th>Notes</th></tr></thead><tbody id="documentsTable"></tbody></table></div>
+    <div class="project-toolbar"><span class="admin-state" id="documentPermissionState">Admin access · Full document control</span><button class="btn primary-btn" id="addDocumentBtn" type="button">+ Add Document</button></div>
+    <div class="table-wrap"><table class="table"><thead><tr><th>Document</th><th>Type</th><th>Client</th><th>Project</th><th>Date</th><th>File</th><th>Notes</th><th>Actions</th></tr></thead><tbody id="documentsTable"></tbody></table></div>
   </div>
 
 </main>
@@ -302,6 +303,26 @@
       </form>
     </div>
   </div>
+  <div id="documentModal" class="modal-backdrop" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-head"><div><h3 id="documentModalTitle">Add Document</h3><div class="muted">Changes are saved to Google Sheets.</div></div><button class="modal-close" id="documentModalClose" type="button">×</button></div>
+      <form id="documentForm">
+        <input type="hidden" id="documentId">
+        <div class="form-grid">
+          <label>Document Name<input id="documentName" required></label>
+          <label>Document Type<input id="documentType" placeholder="Contract, Report, Proposal"></label>
+          <label>Client<select id="documentClientId"></select></label>
+          <label>Project<select id="documentProjectId"></select></label>
+          <label>Date<input id="documentDate" type="date" required></label>
+          <label>File Link<input id="documentFileLink" type="url" placeholder="https://..."></label>
+          <label class="full">Notes<textarea id="documentNotes" rows="3"></textarea></label>
+        </div>
+        <div id="documentFormError" class="form-error"></div>
+        <div class="modal-actions"><button type="button" class="btn secondary-btn" id="documentCancel">Cancel</button><button type="submit" class="btn primary-btn" id="documentSave">Save Document</button></div>
+      </form>
+    </div>
+  </div>
+
   <div id="activityModal" class="modal-backdrop" aria-hidden="true">
     <div class="modal-card">
       <div class="modal-head"><div><h3 id="activityModalTitle">Add Activity</h3><div class="muted">Changes are saved to Google Sheets.</div></div><button class="modal-close" id="activityModalClose" type="button">×</button></div>
@@ -462,7 +483,7 @@
       '<tr><td>'+esc(r.prospectName||r['Prospect ID'])+'</td><td>'+esc(r.clientName||r['Client ID'])+'</td><td>'+esc(formatDateOnly(r.Date))+'</td><td>'+esc(r.Type)+'</td><td>'+esc(r.Purpose)+'</td><td>'+statusBadge(r.Status)+'</td><td>'+esc(formatDateOnly(r['Next Follow-up']))+'</td><td class="project-actions"><button class="action-btn" type="button" data-followup-edit="'+esc(followupId(r))+'">Edit</button><button class="action-btn" type="button" data-followup-delete="'+esc(followupId(r))+'">Delete</button></td></tr>',8,'followupsMeta');
 
     setTable('documentsTable',documents,r =>
-      '<tr><td><span class="mini-title">'+esc(r['Document Name'])+'</span></td><td>'+esc(r['Document Type'])+'</td><td>'+esc(r.clientName)+'</td><td>'+esc(r.projectName)+'</td><td>'+esc(formatDateOnly(r.Date))+'</td><td>'+ (r['File Link'] ? '<a href="'+esc(r['File Link'])+'" target="_blank" rel="noopener">Open file</a>' : '-') +'</td><td>'+esc(r.Notes)+'</td></tr>',7,'documentsMeta');
+      '<tr><td><span class="mini-title">'+esc(r['Document Name'])+'</span></td><td>'+esc(r['Document Type'])+'</td><td>'+esc(r.clientName||r['Client ID'])+'</td><td>'+esc(r.projectName||r['Project ID'])+'</td><td>'+esc(formatDateOnly(r.Date))+'</td><td>'+ (r['File Link'] ? '<a href="'+esc(r['File Link'])+'" target="_blank" rel="noopener">Open file</a>' : '-') +'</td><td>'+esc(r.Notes)+'</td><td class="project-actions"><button class="action-btn" type="button" data-document-edit="'+esc(documentId(r))+'">Edit</button><button class="action-btn" type="button" data-document-delete="'+esc(documentId(r))+'">Delete</button></td></tr>',8,'documentsMeta');
   }
 
   function render(data){
@@ -509,6 +530,7 @@
     bindPaymentActions();
     bindFollowupActions();
     bindActivityActions();
+    bindDocumentActions();
     document.getElementById('updated').textContent = 'Last updated: ' + new Date().toLocaleTimeString('en-IN');
   }
 
@@ -698,6 +720,33 @@
     });
   }
 
+
+  function currentDocumentRows(){
+    const source=window.__dashboardData?.data||{};return Array.isArray(source.documents)?source.documents:[];
+  }
+  function documentId(r){return r?.['Document ID']||r?.['DocumentID']||r?.id||r?.ID||'';}
+  function populateDocumentOptions(){
+    const source=window.__dashboardData?.data||{},clients=Array.isArray(source.clients)?source.clients:[],projects=Array.isArray(source.projects)?source.projects:[];
+    const cs=document.getElementById('documentClientId'),ps=document.getElementById('documentProjectId'),cv=cs.value,pv=ps.value;
+    cs.innerHTML='<option value="">Select client</option>'+clients.map(r=>{const id=clientId(r);return '<option value="'+esc(id)+'">'+esc(r.Name||r.Business||id)+'</option>'}).join('');
+    ps.innerHTML='<option value="">Select project</option>'+projects.map(r=>{const id=r['Project ID']||r.ProjectID||r.id||r.ID||'';return '<option value="'+esc(id)+'">'+esc(r['Project Name']||r.ProjectName||r.name||id)+'</option>'}).join('');cs.value=cv;ps.value=pv;
+  }
+  function openDocumentModal(record){
+    if(!isAdminMode){alert('Enable Admin Mode to manage documents.');return;}populateDocumentOptions();
+    document.getElementById('documentModalTitle').textContent=record?'Edit Document':'Add Document';document.getElementById('documentId').value=documentId(record)||'';
+    document.getElementById('documentName').value=record?.['Document Name']||'';document.getElementById('documentType').value=record?.['Document Type']||'';document.getElementById('documentClientId').value=record?.['Client ID']||'';document.getElementById('documentProjectId').value=record?.['Project ID']||'';document.getElementById('documentDate').value=isoInputDate(record?.Date);document.getElementById('documentFileLink').value=record?.['File Link']||'';document.getElementById('documentNotes').value=record?.Notes||'';document.getElementById('documentFormError').style.display='none';document.getElementById('documentModal').classList.add('open');
+  }
+  function closeDocumentModal(){document.getElementById('documentModal').classList.remove('open')}
+  async function mutateDocument(action,payload){
+    if(!isAdminMode)throw new Error('Admin Mode is required for document changes.');const adminToken=localStorage.getItem(ADMIN_TOKEN_KEY)||'';const response=await fetch('/api/mutate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({entity:'document',action,payload,adminToken})});const result=await response.json().catch(()=>({}));if(!response.ok||result.ok===false)throw new Error(result.error||'Unable to save document');return result;
+  }
+  async function saveDocument(e){
+    e.preventDefault();if(!isAdminMode)return;const btn=document.getElementById('documentSave'),err=document.getElementById('documentFormError');btn.disabled=true;btn.textContent='Saving...';err.style.display='none';const editing=Boolean(document.getElementById('documentId').value.trim());const payload={documentId:editing?document.getElementById('documentId').value.trim():'',documentName:document.getElementById('documentName').value.trim(),documentType:document.getElementById('documentType').value.trim(),clientId:document.getElementById('documentClientId').value,projectId:document.getElementById('documentProjectId').value,date:document.getElementById('documentDate').value,fileLink:document.getElementById('documentFileLink').value.trim(),notes:document.getElementById('documentNotes').value.trim()};try{await mutateDocument(editing?'update':'create',payload);closeDocumentModal();await refreshDashboard()}catch(e){err.textContent=e.message;err.style.display='block'}finally{btn.disabled=false;btn.textContent='Save Document'}
+  }
+  function bindDocumentActions(){
+    document.querySelectorAll('[data-document-edit]').forEach(b=>b.onclick=()=>{const r=currentDocumentRows().find(x=>String(documentId(x))===String(b.dataset.documentEdit));if(r)openDocumentModal(r)});
+    document.querySelectorAll('[data-document-delete]').forEach(b=>b.onclick=async()=>{if(!isAdminMode)return;const id=b.dataset.documentDelete;if(!id)return;if(!confirm('Delete this document? This removes the row from Google Sheets.'))return;b.disabled=true;try{await mutateDocument('delete',{documentId:id});await refreshDashboard()}catch(e){alert(e.message)}finally{b.disabled=false}});
+  }
 
   function currentActivityRows(){
     const source=window.__dashboardData?.data||{}; return Array.isArray(source.activities)?source.activities:[];
@@ -1286,6 +1335,11 @@
   document.getElementById('teamCancel').addEventListener('click',closeTeamModal);
   document.getElementById('teamModal').addEventListener('click',e=>{if(e.target.id==='teamModal')closeTeamModal()});
   document.getElementById('clientForm').addEventListener('submit',saveClient);
+  document.getElementById('addDocumentBtn').addEventListener('click',()=>openDocumentModal());
+  document.getElementById('documentModalClose').addEventListener('click',closeDocumentModal);
+  document.getElementById('documentCancel').addEventListener('click',closeDocumentModal);
+  document.getElementById('documentForm').addEventListener('submit',saveDocument);
+  document.getElementById('documentModal').addEventListener('click',e=>{if(e.target.id==='documentModal')closeDocumentModal()});
   document.getElementById('addActivityBtn').addEventListener('click',()=>openActivityModal());
   document.getElementById('activityModalClose').addEventListener('click',closeActivityModal);
   document.getElementById('activityCancel').addEventListener('click',closeActivityModal);
