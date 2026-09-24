@@ -1,4 +1,4 @@
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby5egfDXJwDuwcGOYLEsKdZImrl8y3nTHIVgafnJeIvYYMqIE9FUOm6mBer3pdyIkLG/exec?api=dashboard';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw9hCJ1TUGzT4xVDDX4vFNoMXblw6j0wuFjUtGrZqE1x6ACNNHefy4Bvlm4kXV-cBjR/exec?api=dashboard';
 
 let cachedData = null;
 let cachedAt = 0;
