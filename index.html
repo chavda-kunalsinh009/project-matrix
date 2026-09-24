@@ -160,7 +160,8 @@
 
   <div class="section data-section admin-only" id="paymentsSection">
     <div class="section-head">Payments <span class="section-meta" id="paymentsMeta">0 records</span></div>
-    <div class="table-wrap"><table class="table"><thead><tr><th>Payment</th><th>Client</th><th>Project</th><th>Invoice</th><th>Date</th><th>Amount</th><th>Method</th><th>Status</th></tr></thead><tbody id="paymentsTable"></tbody></table></div>
+    <div class="project-toolbar"><span class="admin-state" id="paymentPermissionState">Admin access · Full payment control</span><button class="btn primary-btn" id="addPaymentBtn" type="button">+ Add Payment</button></div>
+    <div class="table-wrap"><table class="table"><thead><tr><th>Payment</th><th>Client</th><th>Project</th><th>Invoice</th><th>Date</th><th>Amount</th><th>Method</th><th>Status</th><th>Actions</th></tr></thead><tbody id="paymentsTable"></tbody></table></div>
   </div>
 
   <div class="section data-section admin-only" id="activitiesSection">
@@ -299,6 +300,27 @@
       </form>
     </div>
   </div>
+  <div id="paymentModal" class="modal-backdrop" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-head"><div><h3 id="paymentModalTitle">Add Payment</h3><div class="muted">Changes are saved to Google Sheets.</div></div><button class="modal-close" id="paymentModalClose" type="button">×</button></div>
+      <form id="paymentForm">
+        <input type="hidden" id="paymentId">
+        <div class="form-grid">
+          <label>Client<select id="payClientId" required></select></label>
+          <label>Project<select id="payProjectId"></select></label>
+          <label>Invoice<select id="payInvoiceId"></select></label>
+          <label>Payment Date<input id="payPaymentDate" type="date" required></label>
+          <label>Amount<input id="payAmount" type="number" min="0" step="0.01" required></label>
+          <label>Payment Method<input id="payMethod" type="text" placeholder="Bank Transfer, UPI, Cash"></label>
+          <label>Status<select id="payStatus"><option>Paid</option><option>Pending</option><option>Failed</option><option>Refunded</option><option>Cancelled</option></select></label>
+          <label class="full">Notes<textarea id="payNotes" rows="3"></textarea></label>
+        </div>
+        <div id="paymentFormError" class="form-error"></div>
+        <div class="modal-actions"><button type="button" class="btn secondary-btn" id="paymentCancel">Cancel</button><button type="submit" class="btn primary-btn" id="paymentSave">Save Payment</button></div>
+      </form>
+    </div>
+  </div>
+
 
   <div id="prospectModal" class="modal-backdrop" aria-hidden="true">
     <div class="modal-card">
@@ -390,7 +412,7 @@
       '<tr><td><span class="mini-title">'+esc(r['Invoice ID'])+'</span></td><td>'+esc(r.clientName||r['Client ID'])+'</td><td>'+esc(r.projectName||r['Project ID'])+'</td><td>'+esc(formatDateOnly(r['Invoice Date']))+'</td><td>'+esc(formatDateOnly(r['Due Date']))+'</td><td>'+money(r.Amount)+'</td><td>'+money(r['Paid Amount'])+'</td><td>'+money(Number(r.Amount||0)-Number(r['Paid Amount']||0))+'</td><td>'+statusBadge(r.Status)+'</td><td class="project-actions"><button class="action-btn" type="button" data-invoice-edit="'+esc(r['Invoice ID'])+'">Edit</button><button class="action-btn" type="button" data-invoice-delete="'+esc(r['Invoice ID'])+'">Delete</button></td></tr>',10,'invoicesMeta');
 
     setTable('paymentsTable',payments,r =>
-      '<tr><td><span class="mini-title">'+esc(r['Payment ID'])+'</span></td><td>'+esc(r.clientName)+'</td><td>'+esc(r.projectName)+'</td><td>'+esc(r.invoiceName || r['Invoice ID'])+'</td><td>'+esc(formatDateOnly(r['Payment Date']))+'</td><td>'+money(r.Amount)+'</td><td>'+esc(r['Payment Method'])+'</td><td>'+statusBadge(r.Status)+'</td></tr>',8,'paymentsMeta');
+      '<tr><td><span class="mini-title">'+esc(r['Payment ID'])+'</span></td><td>'+esc(r.clientName||r['Client ID'])+'</td><td>'+esc(r.projectName||r['Project ID'])+'</td><td>'+esc(r.invoiceName||r['Invoice ID'])+'</td><td>'+esc(formatDateOnly(r['Payment Date']))+'</td><td>'+money(r.Amount)+'</td><td>'+esc(r['Payment Method'])+'</td><td>'+statusBadge(r.Status)+'</td><td class="project-actions"><button class="action-btn" type="button" data-payment-edit="'+esc(r['Payment ID'])+'">Edit</button><button class="action-btn" type="button" data-payment-delete="'+esc(r['Payment ID'])+'">Delete</button></td></tr>',10,'paymentsMeta');
 
     setTable('activitiesTable',activities,r =>
       '<tr><td>'+statusBadge(r['Activity Type'])+'</td><td>'+esc(r.clientName)+'</td><td>'+esc(r.projectName)+'</td><td>'+esc(formatDateOnly(r.Date))+'</td><td>'+esc(r.Description)+'</td><td>'+esc(r.userName || r.User)+'</td></tr>',6,'activitiesMeta');
@@ -443,6 +465,7 @@
     bindProjectActions();
     bindTaskActions();
     bindInvoiceActions();
+    bindPaymentActions();
     document.getElementById('updated').textContent = 'Last updated: ' + new Date().toLocaleTimeString('en-IN');
   }
 
@@ -632,6 +655,45 @@
     });
   }
 
+
+  function currentPaymentRows(){
+    const source=window.__dashboardData?.data||{};
+    return Array.isArray(source.payments) ? source.payments : rowsOf(window.__dashboardData?.paymentsData);
+  }
+  function paymentId(r){ return r?.['Payment ID']||r?.id||r?.ID||''; }
+  function populatePaymentOptions(){
+    const source=window.__dashboardData?.data||{}; const clients=source.clients||[], projects=source.projects||[], invoices=source.invoices||[];
+    const cs=document.getElementById('payClientId'), ps=document.getElementById('payProjectId'), ins=document.getElementById('payInvoiceId');
+    const cv=cs.value,pv=ps.value,iv=ins.value;
+    cs.innerHTML='<option value="">Select client</option>'+clients.map(r=>{const id=clientId(r);return '<option value="'+esc(id)+'">'+esc(r.Name||r.Business||id)+'</option>'}).join('');
+    ps.innerHTML='<option value="">Select project</option>'+projects.map(r=>{const id=r['Project ID']||r.id||'';return '<option value="'+esc(id)+'">'+esc(r['Project Name']||id)+'</option>'}).join('');
+    ins.innerHTML='<option value="">Select invoice</option>'+invoices.map(r=>{const id=r['Invoice ID']||r.id||'';return '<option value="'+esc(id)+'">'+esc(id+' · '+(r.clientName||r['Client ID']||''))+'</option>'}).join('');
+    cs.value=cv;ps.value=pv;ins.value=iv;
+  }
+  function openPaymentModal(record){
+    if(!isAdminMode){alert('Enable Admin Mode to manage payments.');return;} populatePaymentOptions();
+    document.getElementById('paymentModalTitle').textContent=record?'Edit Payment':'Add Payment';
+    document.getElementById('paymentId').value=paymentId(record)||'';
+    document.getElementById('payClientId').value=record?.['Client ID']||''; document.getElementById('payProjectId').value=record?.['Project ID']||''; document.getElementById('payInvoiceId').value=record?.['Invoice ID']||'';
+    document.getElementById('payPaymentDate').value=isoInputDate(record?.['Payment Date']); document.getElementById('payAmount').value=record?.Amount??'';
+    document.getElementById('payMethod').value=record?.['Payment Method']||''; document.getElementById('payStatus').value=record?.Status||'Paid'; document.getElementById('payNotes').value=record?.Notes||'';
+    document.getElementById('paymentFormError').style.display='none'; document.getElementById('paymentModal').classList.add('open');
+  }
+  function closePaymentModal(){document.getElementById('paymentModal').classList.remove('open')}
+  async function mutatePayment(action,payload){
+    if(!isAdminMode)throw new Error('Admin Mode is required for payment changes.');
+    const adminToken=localStorage.getItem(ADMIN_TOKEN_KEY)||''; const response=await fetch('/api/mutate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({entity:'payment',action,payload,adminToken})});
+    const result=await response.json().catch(()=>({})); if(!response.ok||result.ok===false)throw new Error(result.error||'Unable to save payment'); return result;
+  }
+  async function savePayment(e){
+    e.preventDefault(); if(!isAdminMode)return; const btn=document.getElementById('paymentSave'),err=document.getElementById('paymentFormError'); btn.disabled=true;btn.textContent='Saving...';err.style.display='none';
+    const editing=Boolean(document.getElementById('paymentId').value.trim()); const payload={paymentId:editing?document.getElementById('paymentId').value.trim():'',clientId:document.getElementById('payClientId').value,projectId:document.getElementById('payProjectId').value,invoiceId:document.getElementById('payInvoiceId').value,paymentDate:document.getElementById('payPaymentDate').value,amount:Number(document.getElementById('payAmount').value||0),paymentMethod:document.getElementById('payMethod').value.trim(),status:document.getElementById('payStatus').value,notes:document.getElementById('payNotes').value.trim()};
+    try{await mutatePayment(editing?'update':'create',payload);closePaymentModal();await refreshDashboard()}catch(e){err.textContent=e.message;err.style.display='block'}finally{btn.disabled=false;btn.textContent='Save Payment'}
+  }
+  function bindPaymentActions(){
+    document.querySelectorAll('[data-payment-edit]').forEach(b=>b.onclick=()=>{const r=currentPaymentRows().find(x=>String(paymentId(x))===String(b.dataset.paymentEdit));if(r)openPaymentModal(r)});
+    document.querySelectorAll('[data-payment-delete]').forEach(b=>b.onclick=async()=>{if(!isAdminMode)return;const r=currentPaymentRows().find(x=>String(paymentId(x))===String(b.dataset.paymentDelete));if(!r||!confirm('Delete payment '+paymentId(r)+'? This removes the row from Google Sheets.'))return;b.disabled=true;try{await mutatePayment('delete',{paymentId:b.dataset.paymentDelete});await refreshDashboard()}catch(e){alert(e.message)}finally{b.disabled=false}});
+  }
 
   function currentInvoiceRows(){
     const source=window.__dashboardData?.data||{};
@@ -1114,6 +1176,12 @@
   document.getElementById('teamCancel').addEventListener('click',closeTeamModal);
   document.getElementById('teamModal').addEventListener('click',e=>{if(e.target.id==='teamModal')closeTeamModal()});
   document.getElementById('clientForm').addEventListener('submit',saveClient);
+  document.getElementById('addPaymentBtn').addEventListener('click',()=>openPaymentModal());
+  document.getElementById('paymentModalClose').addEventListener('click',closePaymentModal);
+  document.getElementById('paymentCancel').addEventListener('click',closePaymentModal);
+  document.getElementById('paymentForm').addEventListener('submit',savePayment);
+  document.getElementById('paymentModal').addEventListener('click',e=>{if(e.target.id==='paymentModal')closePaymentModal()});
+
   document.getElementById('addInvoiceBtn').addEventListener('click',()=>openInvoiceModal());
   document.getElementById('invoiceModalClose').addEventListener('click',closeInvoiceModal);
   document.getElementById('invoiceCancel').addEventListener('click',closeInvoiceModal);
