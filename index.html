@@ -171,7 +171,8 @@
 
   <div class="section data-section admin-only" id="followupsSection">
     <div class="section-head">Follow-ups <span class="section-meta" id="followupsMeta">0 records</span></div>
-    <div class="table-wrap"><table class="table"><thead><tr><th>Prospect</th><th>Client</th><th>Date</th><th>Type</th><th>Purpose</th><th>Status</th><th>Next Follow-up</th></tr></thead><tbody id="followupsTable"></tbody></table></div>
+    <div class="project-toolbar"><span class="admin-state" id="followupPermissionState">Admin access · Full follow-up control</span><button class="btn primary-btn" id="addFollowupBtn" type="button">+ Add Follow-up</button></div>
+    <div class="table-wrap"><table class="table"><thead><tr><th>Prospect</th><th>Client</th><th>Date</th><th>Type</th><th>Purpose</th><th>Status</th><th>Next Follow-up</th><th>Actions</th></tr></thead><tbody id="followupsTable"></tbody></table></div>
   </div>
 
   <div class="section data-section admin-only" id="documentsSection">
@@ -300,6 +301,26 @@
       </form>
     </div>
   </div>
+  <div id="followupModal" class="modal-backdrop" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-head"><div><h3 id="followupModalTitle">Add Follow-up</h3><div class="muted">Changes are saved to Google Sheets.</div></div><button class="modal-close" id="followupModalClose" type="button">×</button></div>
+      <form id="followupForm">
+        <input type="hidden" id="followupId">
+        <div class="form-grid">
+          <label>Prospect<select id="fuProspectId"></select></label>
+          <label>Client<select id="fuClientId"></select></label>
+          <label>Date<input id="fuDate" type="date" required></label>
+          <label>Type<input id="fuType" type="text" placeholder="Call, Email, Meeting"></label>
+          <label>Purpose<input id="fuPurpose" type="text"></label>
+          <label>Status<select id="fuStatus"><option>Pending</option><option>Completed</option><option>Cancelled</option></select></label>
+          <label>Next Follow-up<input id="fuNextDate" type="date"></label>
+        </div>
+        <div id="followupFormError" class="form-error"></div>
+        <div class="modal-actions"><button type="button" class="btn secondary-btn" id="followupCancel">Cancel</button><button type="submit" class="btn primary-btn" id="followupSave">Save Follow-up</button></div>
+      </form>
+    </div>
+  </div>
+
   <div id="paymentModal" class="modal-backdrop" aria-hidden="true">
     <div class="modal-card">
       <div class="modal-head"><div><h3 id="paymentModalTitle">Add Payment</h3><div class="muted">Changes are saved to Google Sheets.</div></div><button class="modal-close" id="paymentModalClose" type="button">×</button></div>
@@ -418,7 +439,7 @@
       '<tr><td>'+statusBadge(r['Activity Type'])+'</td><td>'+esc(r.clientName)+'</td><td>'+esc(r.projectName)+'</td><td>'+esc(formatDateOnly(r.Date))+'</td><td>'+esc(r.Description)+'</td><td>'+esc(r.userName || r.User)+'</td></tr>',6,'activitiesMeta');
 
     setTable('followupsTable',followups,r =>
-      '<tr><td>'+esc(r.prospectName)+'</td><td>'+esc(r.clientName)+'</td><td>'+esc(formatDateOnly(r.Date))+'</td><td>'+esc(r.Type)+'</td><td>'+esc(r.Purpose)+'</td><td>'+statusBadge(r.Status)+'</td><td>'+esc(formatDateOnly(r['Next Follow-up']))+'</td></tr>',7,'followupsMeta');
+      '<tr><td>'+esc(r.prospectName||r['Prospect ID'])+'</td><td>'+esc(r.clientName||r['Client ID'])+'</td><td>'+esc(formatDateOnly(r.Date))+'</td><td>'+esc(r.Type)+'</td><td>'+esc(r.Purpose)+'</td><td>'+statusBadge(r.Status)+'</td><td>'+esc(formatDateOnly(r['Next Follow-up']))+'</td><td class="project-actions"><button class="action-btn" type="button" data-followup-edit="'+esc(followupId(r))+'">Edit</button><button class="action-btn" type="button" data-followup-delete="'+esc(followupId(r))+'">Delete</button></td></tr>',8,'followupsMeta');
 
     setTable('documentsTable',documents,r =>
       '<tr><td><span class="mini-title">'+esc(r['Document Name'])+'</span></td><td>'+esc(r['Document Type'])+'</td><td>'+esc(r.clientName)+'</td><td>'+esc(r.projectName)+'</td><td>'+esc(formatDateOnly(r.Date))+'</td><td>'+ (r['File Link'] ? '<a href="'+esc(r['File Link'])+'" target="_blank" rel="noopener">Open file</a>' : '-') +'</td><td>'+esc(r.Notes)+'</td></tr>',7,'documentsMeta');
@@ -466,6 +487,7 @@
     bindTaskActions();
     bindInvoiceActions();
     bindPaymentActions();
+    bindFollowupActions();
     document.getElementById('updated').textContent = 'Last updated: ' + new Date().toLocaleTimeString('en-IN');
   }
 
@@ -655,6 +677,41 @@
     });
   }
 
+
+  function currentFollowupRows(){
+    const source=window.__dashboardData?.data||{}; return Array.isArray(source.followUps)?source.followUps:rowsOf(window.__dashboardData?.followUpsData);
+  }
+  function followupId(r){ return r?.['Follow-up ID']||r?.['Follow Up ID']||r?.['Followup ID']||r?.id||r?.ID||''; }
+  function populateFollowupOptions(){
+    const source=window.__dashboardData?.data||{}; const prospects=source.prospects||[],clients=source.clients||[];
+    const ps=document.getElementById('fuProspectId'),cs=document.getElementById('fuClientId'); const pv=ps.value,cv=cs.value;
+    ps.innerHTML='<option value="">Select prospect</option>'+prospects.map(r=>{const id=r['Prospect ID']||r.id||'';return '<option value="'+esc(id)+'">'+esc(r.Name||r.Business||id)+'</option>'}).join('');
+    cs.innerHTML='<option value="">Select client</option>'+clients.map(r=>{const id=clientId(r);return '<option value="'+esc(id)+'">'+esc(r.Name||r.Business||id)+'</option>'}).join(''); ps.value=pv;cs.value=cv;
+  }
+  function openFollowupModal(record){
+    if(!isAdminMode){alert('Enable Admin Mode to manage follow-ups.');return;} populateFollowupOptions();
+    document.getElementById('followupModalTitle').textContent=record?'Edit Follow-up':'Add Follow-up'; document.getElementById('followupId').value=followupId(record)||'';
+    document.getElementById('fuProspectId').value=record?.['Prospect ID']||''; document.getElementById('fuClientId').value=record?.['Client ID']||''; document.getElementById('fuDate').value=isoInputDate(record?.Date);
+    document.getElementById('fuType').value=record?.Type||''; document.getElementById('fuPurpose').value=record?.Purpose||''; document.getElementById('fuStatus').value=record?.Status||'Pending'; document.getElementById('fuNextDate').value=isoInputDate(record?.['Next Follow-up']);
+    document.getElementById('followupFormError').style.display='none'; document.getElementById('followupModal').classList.add('open');
+  }
+  function closeFollowupModal(){document.getElementById('followupModal').classList.remove('open')}
+  async function mutateFollowup(action,payload){
+    if(!isAdminMode)throw new Error('Admin Mode is required for follow-up changes.'); const adminToken=localStorage.getItem(ADMIN_TOKEN_KEY)||'';
+    const response=await fetch('/api/mutate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({entity:'followup',action,payload,adminToken})}); const result=await response.json().catch(()=>({}));
+    if(!response.ok||result.ok===false)throw new Error(result.error||'Unable to save follow-up'); return result;
+  }
+  async function saveFollowup(e){
+    e.preventDefault(); if(!isAdminMode)return; const btn=document.getElementById('followupSave'),err=document.getElementById('followupFormError'); btn.disabled=true;btn.textContent='Saving...';err.style.display='none';
+    const editing=Boolean(document.getElementById('followupId').value.trim()),date=document.getElementById('fuDate').value,next=document.getElementById('fuNextDate').value;
+    if(next&&date&&next<date){err.textContent='Next Follow-up cannot be before the Follow-up Date.';err.style.display='block';btn.disabled=false;btn.textContent='Save Follow-up';return;}
+    const payload={followupId:editing?document.getElementById('followupId').value.trim():'',prospectId:document.getElementById('fuProspectId').value,clientId:document.getElementById('fuClientId').value,date,type:document.getElementById('fuType').value.trim(),purpose:document.getElementById('fuPurpose').value.trim(),status:document.getElementById('fuStatus').value,nextFollowup:next};
+    try{await mutateFollowup(editing?'update':'create',payload);closeFollowupModal();await refreshDashboard()}catch(e){err.textContent=e.message;err.style.display='block'}finally{btn.disabled=false;btn.textContent='Save Follow-up'}
+  }
+  function bindFollowupActions(){
+    document.querySelectorAll('[data-followup-edit]').forEach(b=>b.onclick=()=>{const r=currentFollowupRows().find(x=>String(followupId(x))===String(b.dataset.followupEdit));if(r)openFollowupModal(r)});
+    document.querySelectorAll('[data-followup-delete]').forEach(b=>b.onclick=async()=>{if(!isAdminMode)return;const r=currentFollowupRows().find(x=>String(followupId(x))===String(b.dataset.followupDelete));if(!r||!confirm('Delete follow-up '+followupId(r)+'? This removes the row from Google Sheets.'))return;b.disabled=true;try{await mutateFollowup('delete',{followupId:b.dataset.followupDelete});await refreshDashboard()}catch(e){alert(e.message)}finally{b.disabled=false}});
+  }
 
   function currentPaymentRows(){
     const source=window.__dashboardData?.data||{};
@@ -1176,6 +1233,12 @@
   document.getElementById('teamCancel').addEventListener('click',closeTeamModal);
   document.getElementById('teamModal').addEventListener('click',e=>{if(e.target.id==='teamModal')closeTeamModal()});
   document.getElementById('clientForm').addEventListener('submit',saveClient);
+  document.getElementById('addFollowupBtn').addEventListener('click',()=>openFollowupModal());
+  document.getElementById('followupModalClose').addEventListener('click',closeFollowupModal);
+  document.getElementById('followupCancel').addEventListener('click',closeFollowupModal);
+  document.getElementById('followupForm').addEventListener('submit',saveFollowup);
+  document.getElementById('followupModal').addEventListener('click',e=>{if(e.target.id==='followupModal')closeFollowupModal()});
+
   document.getElementById('addPaymentBtn').addEventListener('click',()=>openPaymentModal());
   document.getElementById('paymentModalClose').addEventListener('click',closePaymentModal);
   document.getElementById('paymentCancel').addEventListener('click',closePaymentModal);
