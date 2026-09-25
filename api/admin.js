@@ -1,5 +1,4 @@
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxeI5mwAoQHlNbUryMtPQTFqaQMEgwP846LE9ydinx1xQmqrTQT5n25Hf-oliK_hJfT/exec';
-
+const APPS_SCRIPT_URL = process.env.APPS_SCRIPT_URL;
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({
