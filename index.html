@@ -529,8 +529,23 @@
     setTable('projectsTable',projects,r =>
       '<tr><td><span class="mini-title">'+esc(r['Project Name'])+'</span><span class="subtext">'+esc(r['Project ID'])+'</span></td><td>'+esc(r.clientBusiness || r.clientName || r['Client ID'])+'</td><td>'+esc(r.Service)+'</td><td>'+esc(formatDateOnly(r['Start Date']))+'</td><td>'+esc(formatDateOnly(r.Deadline))+'</td><td>'+statusBadge(r.Status)+'</td><td>'+statusBadge(r.Priority)+'</td><td>'+esc(r.Manager)+'</td><td class="project-actions">'+(isAdminMode ? '<button class="action-btn" type="button" data-project-edit="'+esc(r['Project ID'])+'">Edit</button><button class="action-btn" type="button" data-project-delete="'+esc(r['Project ID'])+'">Delete</button>' : '<span class="muted">View only</span>')+'</td></tr>',9,'projectsMeta');
 
+    const projectById = new Map(projects.map(p => [String(p['Project ID'] || p.id || p.ID || '').trim(), p]));
+    const clientById = new Map(clients.map(cl => [String(cl['Client ID'] || cl.id || cl.ID || '').trim(), cl]));
+    const taskClientName = r => {
+      if (r.clientName) return r.clientName;
+      if (r['Client ID']) {
+        const cl = clientById.get(String(r['Client ID']).trim());
+        if (cl) return cl.Business || cl.Name || r['Client ID'];
+      }
+      const p = projectById.get(String(r['Project ID'] || r.projectId || '').trim());
+      if (!p) return '';
+      if (p.clientName || p.clientBusiness) return p.clientBusiness || p.clientName;
+      const cl = clientById.get(String(p['Client ID'] || p.clientId || '').trim());
+      return cl ? (cl.Business || cl.Name || p['Client ID']) : (p['Client ID'] || '');
+    };
+
     setTable('tasksTable',tasks,r =>
-      '<tr><td><span class="mini-title">'+esc(r['Task Name'])+'</span><span class="subtext">'+esc(r['Task ID'])+'</span></td><td>'+esc(r.projectName || r['Project ID'])+'</td><td>'+esc(r.clientName || r['Client ID'])+'</td><td>'+esc(r.assignedToName || r['Assigned To'] || r['Assigned To ID'])+'</td><td>'+statusBadge(r.Priority)+'</td><td>'+esc(formatDateOnly(r.Deadline))+'</td><td>'+statusBadge(r.Status)+'</td><td>'+esc(r.Progress ?? 0)+'%</td><td class="project-actions">'+(isAdminMode ? '<button class="action-btn" type="button" data-task-edit="'+esc(r['Task ID'])+'">Edit</button><button class="action-btn" type="button" data-task-delete="'+esc(r['Task ID'])+'">Delete</button>' : '<button class="action-btn" type="button" data-task-edit="'+esc(r['Task ID'])+'">Edit</button>')+'</td></tr>',9,'tasksMeta');
+      '<tr><td><span class="mini-title">'+esc(r['Task Name'])+'</span><span class="subtext">'+esc(r['Task ID'])+'</span></td><td>'+esc(r.projectName || r['Project ID'])+'</td><td>'+esc(taskClientName(r))+'</td><td>'+esc(r.assignedToName || r['Assigned To'] || r['Assigned To ID'])+'</td><td>'+statusBadge(r.Priority)+'</td><td>'+esc(formatDateOnly(r.Deadline))+'</td><td>'+statusBadge(r.Status)+'</td><td>'+esc(r.Progress ?? 0)+'%</td><td class="project-actions">'+(isAdminMode ? '<button class="action-btn" type="button" data-task-edit="'+esc(r['Task ID'])+'">Edit</button><button class="action-btn" type="button" data-task-delete="'+esc(r['Task ID'])+'">Delete</button>' : '<button class="action-btn" type="button" data-task-edit="'+esc(r['Task ID'])+'">Edit</button>')+'</td></tr>',9,'tasksMeta');
 
     setTable('teamTable',team,r => {
       const id=teamMemberId(r);
