@@ -571,7 +571,7 @@
     document.getElementById('clients').textContent = clientCount;
     document.getElementById('revenue').textContent = money(stats.revenue ?? data.revenue);
     document.getElementById('pending').textContent = money(stats.pendingRevenue ?? data.pendingRevenue);
-    document.getElementById('collection').textContent = pct(stats.paymentCollection ?? data.paymentCollection);
+    document.getElementById('collection').textContent = money(stats.paymentCollection ?? data.paymentCollection);
     document.getElementById('conversion').textContent = pct(stats.conversionRate ?? data.conversionRate);
     document.getElementById('activity').textContent = taskCount + teamCount;
     document.getElementById('payments').textContent = paymentCount;
