@@ -578,6 +578,7 @@
   }
   function setTable(id, rows, builder, colspan, metaId){
     const table=document.getElementById(id), meta=document.getElementById(metaId);
+    if(!table) return;
     if(meta) meta.textContent=rows.length+' record'+(rows.length===1?'':'s');
     table.innerHTML=rows.length ? rows.map(builder).join('') : '<tr><td colspan="'+colspan+'" class="empty">No records found.</td></tr>';
   }
@@ -651,6 +652,9 @@
     window.__dashboardData=data;
     const stats = data.stats || {};
     const source = data.data || {};
+
+    // Render every module table first. Dashboard analytics must never be able to hide live data.
+    try { renderDataTables(data); } catch (tableError) { console.error('Module table rendering failed:', tableError); }
     const prospectRows = Array.isArray(source.prospects) ? source.prospects : [];
     
     // Use numeric values from the API's stats object.
@@ -770,7 +774,6 @@
       '<tr><td>'+esc(r.name)+'</td><td>'+esc(r.business)+'</td><td>'+esc(r.service)+'</td><td>'+money(r.quote)+'</td><td>'+statusBadge(r.status)+'</td><td>'+esc(r.followUp)+'</td></tr>'
     ).join('') : '<tr><td colspan="6">No prospects found.</td></tr>';
 
-    renderDataTables(data);
     bindProspectActions();
     bindProjectActions();
     bindTaskActions();
