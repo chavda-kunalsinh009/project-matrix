@@ -199,7 +199,7 @@
         <div class="health-card success"><div class="label">Completed Projects</div><div class="value" id="completedProjects">0</div></div>
       </div>
     </div>
-    <div class="section">
+    <div class="section admin-only">
       <div class="section-head">Financial Overview <span class="section-meta">Collection and outstanding balance</span></div>
       <div class="health-grid">
         <div class="health-card info"><div class="label">Revenue</div><div class="value" id="dashRevenue">₹0</div></div>
@@ -216,7 +216,7 @@
       <div class="section-head">Upcoming Deadlines <span class="section-meta">Next 5 project tasks</span></div>
       <div class="dashboard-list" id="upcomingDeadlines"><div class="dash-row"><div class="muted">No upcoming deadlines.</div></div></div>
     </div>
-    <div class="section">
+    <div class="section admin-only">
       <div class="section-head">Overdue Center <span class="section-meta">Items requiring attention</span></div>
       <div class="dashboard-list" id="overdueCenter"><div class="dash-row"><div class="muted">No overdue items.</div></div></div>
     </div>
@@ -227,7 +227,7 @@
       <div class="section-head">Team Workload <span class="section-meta">Assigned task distribution</span></div>
       <div class="table-wrap"><table class="table workload-table"><thead><tr><th>Team Member</th><th>Assigned</th><th>In Progress</th><th>Completed</th><th>Overdue</th></tr></thead><tbody id="teamWorkload"><tr><td colspan="5">No workload data.</td></tr></tbody></table></div>
     </div>
-    <div class="section">
+    <div class="section admin-only">
       <div class="section-head">Follow-up Pipeline <span class="section-meta">Current follow-up workload</span></div>
       <div class="health-grid">
         <div class="health-card info"><div class="label">Today</div><div class="value" id="followToday">0</div></div>
@@ -1409,13 +1409,18 @@
     }
   }
 
+  let refreshInProgress = false;
   async function refreshDashboard(){
+    if(refreshInProgress) return;
+    refreshInProgress = true;
+    const refreshBtn = document.getElementById('refreshBtn');
     const error = document.getElementById('error');
+    if(refreshBtn){ refreshBtn.disabled=true; refreshBtn.textContent='↻ Refreshing…'; }
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 15000);
 
     try{
-      const response = await fetch(API_URL, {
+      const response = await fetch(API_URL + '?_=' + Date.now(), {
         method:'GET',
         cache:'no-store',
         signal:controller.signal
@@ -1445,6 +1450,8 @@
     }finally{
       clearTimeout(timeout);
       document.getElementById('loading').style.display='none';
+      refreshInProgress=false;
+      if(refreshBtn){ refreshBtn.disabled=false; refreshBtn.textContent='↻ Refresh'; }
     }
   }
 
