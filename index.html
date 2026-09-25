@@ -661,6 +661,8 @@
     const paymentCount = Number(stats.payments ?? (Array.isArray(source.payments) ? source.payments.length : 0));
     const projectCount = Number(stats.projects ?? (Array.isArray(source.projects) ? source.projects.length : 0));
 
+    // Dashboard insights are non-blocking: a calculation error must never prevent module tables from rendering.
+    try {
     // Derived dashboard intelligence from live module data.
     const today = new Date(); today.setHours(0,0,0,0);
     const dayMs = 86400000;
@@ -756,7 +758,10 @@
 
     const recentActivity=[...activityRows].sort((a,b)=>(dateOnly(b.Date)||new Date(0))-(dateOnly(a.Date)||new Date(0))).slice(0,8);
     document.getElementById('recentActivity').innerHTML=recentActivity.length?recentActivity.map(r=>'<div class="dash-row"><div class="dash-main"><div class="dash-title">'+esc(r.Description||r['Activity Type']||'Activity')+'</div><div class="dash-meta">'+esc(r.userName||r.User||'')+' · '+esc(r.clientName||r['Client ID']||'')+' · '+esc(r.projectName||r['Project ID']||'')+'</div></div><div>'+esc(formatDateOnly(r.Date))+'</div></div>').join(''):'<div class="dash-row"><div class="muted">No recent activity.</div></div>';
-    
+    } catch (dashboardInsightError) {
+      console.error('Dashboard insights error:', dashboardInsightError);
+    }
+
     const notes = Array.isArray(data.ownerNotes) ? data.ownerNotes.join(' • ') : (data.ownerNotes || '');
     document.getElementById('notes').textContent = notes || 'No owner notes have been added yet.';
 
