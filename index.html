@@ -137,6 +137,17 @@
     .sys:nth-child(2){border-top-color:#8b5cf6}
     .sys:nth-child(3){border-top-color:#10b981}
     .sys:nth-child(4){border-top-color:#f59e0b}
+    .dashboard-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-bottom:18px}
+    .health-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:18px}
+    .health-card{background:#fff;border:1px solid #e7ecf3;border-radius:12px;padding:15px}
+    .health-card .label{margin-bottom:6px}.health-card .value{font-size:24px}
+    .health-card.danger{border-left:4px solid #ef4444}.health-card.warning{border-left:4px solid #f59e0b}.health-card.success{border-left:4px solid #10b981}.health-card.info{border-left:4px solid #3b82f6}
+    .dashboard-list{padding:0}.dashboard-list .dash-row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 18px;border-bottom:1px solid #edf1f6}
+    .dashboard-list .dash-row:last-child{border-bottom:0}.dash-main{min-width:0}.dash-title{font-weight:700;font-size:13px}.dash-meta{font-size:11px;color:#8994a6;margin-top:3px}
+    .workload-table{min-width:560px}.workload-table th,.workload-table td{padding:11px 14px}
+    .metric-good{color:#047857}.metric-warn{color:#b45309}.metric-danger{color:#be123c}
+    @media(max-width:900px){.dashboard-grid{grid-template-columns:1fr}.health-grid{grid-template-columns:repeat(2,1fr)}}
+    @media(max-width:600px){.health-grid{grid-template-columns:1fr 1fr}.dashboard-list .dash-row{align-items:flex-start;flex-direction:column;gap:7px}}
 
   </style>
 </head>
@@ -158,9 +169,9 @@
     <div class="card kpi"><div class="label">Pending Revenue</div><div class="value" id="pending">₹0</div></div>
   </div>
   <div class="secondary admin-only">
-    <div class="card"><div class="label">Payment Collection</div><div class="value" id="collection">0.0%</div><div class="progress"><div class="bar" id="collectionBar"></div></div></div>
+    <div class="card"><div class="label">Payment Collection</div><div class="value" id="collection">₹0</div><div class="progress"><div class="bar" id="collectionBar"></div></div></div>
     <div class="card"><div class="label">Conversion Rate</div><div class="value" id="conversion">0.0%</div><div class="progress"><div class="bar" id="conversionBar"></div></div></div>
-    <div class="card"><div class="label">Activity Overview</div><div class="value" id="activity">0</div><div class="muted">Tasks + team activity</div></div>
+    <div class="card"><div class="label">Activity Overview</div><div class="value" id="activity">0</div><div class="muted">Live workspace activity</div></div>
   </div>
   <div class="section admin-only">
     <div class="section-head">Recent Prospects <span class="section-meta">Latest records from your Prospects sheet</span></div>
@@ -173,6 +184,64 @@
     <div class="sys">Team Members<b id="team">0</b></div>
     <div class="sys admin-only">Payments Records<b id="payments">0</b></div>
   </div></div>
+
+  <div class="dashboard-grid">
+    <div class="section">
+      <div class="section-head">Project &amp; Task Health <span class="section-meta">Live execution status</span></div>
+      <div class="health-grid">
+        <div class="health-card info"><div class="label">Active Projects</div><div class="value" id="activeProjects">0</div></div>
+        <div class="health-card danger"><div class="label">Overdue Projects</div><div class="value" id="overdueProjects">0</div></div>
+        <div class="health-card warning"><div class="label">Open Tasks</div><div class="value" id="openTasks">0</div></div>
+        <div class="health-card danger"><div class="label">Overdue Tasks</div><div class="value" id="overdueTasks">0</div></div>
+        <div class="health-card success"><div class="label">Completed Tasks</div><div class="value" id="completedTasks">0</div></div>
+        <div class="health-card info"><div class="label">Due Today</div><div class="value" id="dueToday">0</div></div>
+        <div class="health-card warning"><div class="label">Due This Week</div><div class="value" id="dueThisWeek">0</div></div>
+        <div class="health-card success"><div class="label">Completed Projects</div><div class="value" id="completedProjects">0</div></div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-head">Financial Overview <span class="section-meta">Collection and outstanding balance</span></div>
+      <div class="health-grid">
+        <div class="health-card info"><div class="label">Revenue</div><div class="value" id="dashRevenue">₹0</div></div>
+        <div class="health-card success"><div class="label">Collected</div><div class="value" id="dashCollected">₹0</div></div>
+        <div class="health-card warning"><div class="label">Outstanding</div><div class="value" id="dashOutstanding">₹0</div></div>
+        <div class="health-card danger"><div class="label">Overdue Invoices</div><div class="value" id="dashOverdueInvoices">0</div></div>
+      </div>
+      <div style="padding:0 18px 18px"><div class="label">Collection progress <span id="collectionPercent">0.0%</span></div><div class="progress"><div class="bar" id="dashboardCollectionBar"></div></div></div>
+    </div>
+  </div>
+
+  <div class="dashboard-grid">
+    <div class="section">
+      <div class="section-head">Upcoming Deadlines <span class="section-meta">Next 5 project tasks</span></div>
+      <div class="dashboard-list" id="upcomingDeadlines"><div class="dash-row"><div class="muted">No upcoming deadlines.</div></div></div>
+    </div>
+    <div class="section">
+      <div class="section-head">Overdue Center <span class="section-meta">Items requiring attention</span></div>
+      <div class="dashboard-list" id="overdueCenter"><div class="dash-row"><div class="muted">No overdue items.</div></div></div>
+    </div>
+  </div>
+
+  <div class="dashboard-grid">
+    <div class="section">
+      <div class="section-head">Team Workload <span class="section-meta">Assigned task distribution</span></div>
+      <div class="table-wrap"><table class="table workload-table"><thead><tr><th>Team Member</th><th>Assigned</th><th>In Progress</th><th>Completed</th><th>Overdue</th></tr></thead><tbody id="teamWorkload"><tr><td colspan="5">No workload data.</td></tr></tbody></table></div>
+    </div>
+    <div class="section">
+      <div class="section-head">Follow-up Pipeline <span class="section-meta">Current follow-up workload</span></div>
+      <div class="health-grid">
+        <div class="health-card info"><div class="label">Today</div><div class="value" id="followToday">0</div></div>
+        <div class="health-card warning"><div class="label">Upcoming</div><div class="value" id="followUpcoming">0</div></div>
+        <div class="health-card danger"><div class="label">Overdue</div><div class="value" id="followOverdue">0</div></div>
+        <div class="health-card success"><div class="label">Completed</div><div class="value" id="followCompleted">0</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section admin-only">
+    <div class="section-head">Recent Activity <span class="section-meta">Latest updates across the workspace</span></div>
+    <div class="dashboard-list" id="recentActivity"><div class="dash-row"><div class="muted">No recent activity.</div></div></div>
+  </div>
 
   <aside class="data-nav" id="dataNav" aria-label="Project Matrix navigation">
     <button class="active" data-target="dashboardTop">Dashboard</button>
@@ -592,19 +661,101 @@
     const paymentCount = Number(stats.payments ?? (Array.isArray(source.payments) ? source.payments.length : 0));
     const projectCount = Number(stats.projects ?? (Array.isArray(source.projects) ? source.projects.length : 0));
 
+    // Derived dashboard intelligence from live module data.
+    const today = new Date(); today.setHours(0,0,0,0);
+    const dayMs = 86400000;
+    const dateOnly = v => {
+      if(v===null || v===undefined || v==='') return null;
+      const s=String(v).trim();
+      if(/^\\d{4}-\\d{2}-\\d{2}/.test(s)) return new Date(s.slice(0,10)+'T00:00:00');
+      if(/^\\d{2}\\/\\d{2}\\/\\d{4}$/.test(s)){const p=s.split('/');return new Date(Number(p[2]),Number(p[1])-1,Number(p[0]));}
+      const d=new Date(s); if(isNaN(d.getTime())) return null; d.setHours(0,0,0,0); return d;
+    };
+    const projectRows=Array.isArray(source.projects)?source.projects:[];
+    const taskRows=Array.isArray(source.tasks)?source.tasks:[];
+    const invoiceRows=Array.isArray(source.invoices)?source.invoices:[];
+    const paymentRows=Array.isArray(source.payments)?source.payments:[];
+    const followupRows=Array.isArray(source.followUps)?source.followUps:[];
+    const activityRows=Array.isArray(source.activities)?source.activities:[];
+    const teamRows=Array.isArray(source.team)?source.team:[];
+    const projectNameById=new Map(projectRows.map(r=>[String(r['Project ID']||r.id||r.ID||'').trim(),r['Project Name']||r.name||r['Project ID']||'']));
+    const teamNameById=new Map(teamRows.map(r=>[String(teamMemberId(r)).trim(),r.Name||r.name||teamMemberId(r)]));
+    const taskDate=r=>dateOnly(r.Deadline);
+    const projectDeadline=r=>dateOnly(r.Deadline);
+    const isCompleted=v=>/completed|complete|done/i.test(String(v||''));
+    const isOpen=v=>!isCompleted(v) && !/cancelled|closed/i.test(String(v||''));
+    const isOverdueDate=d=>d && d<today;
+    const taskOverdue=r=>isOpen(r.Status)&&isOverdueDate(taskDate(r));
+    const projectOverdue=r=>isOpen(r.Status)&&isOverdueDate(projectDeadline(r));
+    const taskCompleted=taskRows.filter(r=>isCompleted(r.Status)).length;
+    const openTaskRows=taskRows.filter(r=>isOpen(r.Status));
+    const overdueTaskRows=taskRows.filter(taskOverdue);
+    const completedProjectRows=projectRows.filter(r=>isCompleted(r.Status));
+    const activeProjectRows=projectRows.filter(r=>isOpen(r.Status));
+    const overdueProjectRows=projectRows.filter(projectOverdue);
+    const dueTodayRows=taskRows.filter(r=>{const d=taskDate(r);return d&&d.getTime()===today.getTime()&&isOpen(r.Status);});
+    const dueWeekRows=taskRows.filter(r=>{const d=taskDate(r);return d&&d>=today&&d<new Date(today.getTime()+7*dayMs)&&isOpen(r.Status);});
+    const revenue=Number(stats.revenue ?? data.revenue ?? 0);
+    const collected=Number(stats.paymentCollection ?? data.paymentCollection ?? paymentRows.reduce((s,r)=>s+Number(r.Amount||0),0));
+    const outstanding=Math.max(0,revenue-collected);
+    const collectionRate=revenue>0 ? Math.min(100,Math.max(0,(collected/revenue)*100)) : 0;
+    const overdueInvoiceRows=invoiceRows.filter(r=>{const d=dateOnly(r['Due Date']);const bal=Number(r.Amount||0)-Number(r['Paid Amount']||0);return bal>0&&d&&d<today;});
+    const overdueInvoiceCount=overdueInvoiceRows.length;
+    const followTodayRows=followupRows.filter(r=>{const d=dateOnly(r['Next Follow-up']);return d&&d.getTime()===today.getTime()&&!/completed|done/i.test(String(r.Status||''));});
+    const followOverdueRows=followupRows.filter(r=>{const d=dateOnly(r['Next Follow-up']);return d&&d<today&&!/completed|done/i.test(String(r.Status||''));});
+    const followUpcomingRows=followupRows.filter(r=>{const d=dateOnly(r['Next Follow-up']);return d&&d>today&&!/completed|done/i.test(String(r.Status||''));});
+    const followCompletedRows=followupRows.filter(r=>/completed|done/i.test(String(r.Status||'')));
+
     document.getElementById('leads').textContent = prospectCount;
     document.getElementById('clients').textContent = clientCount;
     document.getElementById('revenue').textContent = money(stats.revenue ?? data.revenue);
     document.getElementById('pending').textContent = money(stats.pendingRevenue ?? data.pendingRevenue);
     document.getElementById('collection').textContent = money(stats.paymentCollection ?? data.paymentCollection);
     document.getElementById('conversion').textContent = pct(stats.conversionRate ?? data.conversionRate);
-    document.getElementById('activity').textContent = taskCount + teamCount;
+    document.getElementById('activity').textContent = activityRows.length;
     document.getElementById('payments').textContent = paymentCount;
     document.getElementById('projects').textContent = projectCount;
     document.getElementById('tasks').textContent = taskCount;
     document.getElementById('team').textContent = teamCount;
-    document.getElementById('collectionBar').style.width = Math.min(100,Math.max(0,Number(stats.paymentCollection ?? data.paymentCollection ?? 0))) + '%';
+    document.getElementById('collectionBar').style.width = collectionRate + '%';
     document.getElementById('conversionBar').style.width = Math.min(100,Math.max(0,Number(stats.conversionRate ?? data.conversionRate ?? 0))) + '%';
+
+    document.getElementById('activeProjects').textContent=activeProjectRows.length;
+    document.getElementById('overdueProjects').textContent=overdueProjectRows.length;
+    document.getElementById('openTasks').textContent=openTaskRows.length;
+    document.getElementById('overdueTasks').textContent=overdueTaskRows.length;
+    document.getElementById('completedTasks').textContent=taskCompleted;
+    document.getElementById('dueToday').textContent=dueTodayRows.length;
+    document.getElementById('dueThisWeek').textContent=dueWeekRows.length;
+    document.getElementById('completedProjects').textContent=completedProjectRows.length;
+    document.getElementById('dashRevenue').textContent=money(revenue);
+    document.getElementById('dashCollected').textContent=money(collected);
+    document.getElementById('dashOutstanding').textContent=money(outstanding);
+    document.getElementById('dashOverdueInvoices').textContent=overdueInvoiceCount;
+    document.getElementById('collectionPercent').textContent=collectionRate.toFixed(1)+'%';
+    document.getElementById('dashboardCollectionBar').style.width=collectionRate+'%';
+    document.getElementById('followToday').textContent=followTodayRows.length;
+    document.getElementById('followUpcoming').textContent=followUpcomingRows.length;
+    document.getElementById('followOverdue').textContent=followOverdueRows.length;
+    document.getElementById('followCompleted').textContent=followCompletedRows.length;
+
+    const upcoming=[...taskRows].filter(r=>{const d=taskDate(r);return d&&d>=today&&isOpen(r.Status);}).sort((a,b)=>taskDate(a)-taskDate(b)).slice(0,5);
+    document.getElementById('upcomingDeadlines').innerHTML=upcoming.length ? upcoming.map(r=>'<div class="dash-row"><div class="dash-main"><div class="dash-title">'+esc(r['Task Name']||r['Task ID'])+'</div><div class="dash-meta">'+esc(projectNameById.get(String(r['Project ID']||'').trim())||r['Project ID']||'')+' · '+esc(r.Status||'Not Started')+'</div></div><div>'+esc(formatDateOnly(r.Deadline))+'</div></div>').join('') : '<div class="dash-row"><div class="muted">No upcoming deadlines.</div></div>';
+
+    const overdueItems=[
+      ...overdueTaskRows.slice(0,5).map(r=>({type:'Task',name:r['Task Name']||r['Task ID'],date:r.Deadline,meta:projectNameById.get(String(r['Project ID']||'').trim())||r['Project ID']})),
+      ...overdueProjectRows.slice(0,5).map(r=>({type:'Project',name:r['Project Name']||r['Project ID'],date:r.Deadline,meta:r.Status||''})),
+      ...overdueInvoiceRows.slice(0,5).map(r=>({type:'Invoice',name:r['Invoice ID'],date:r['Due Date'],meta:money(Number(r.Amount||0)-Number(r['Paid Amount']||0))}))
+    ].sort((a,b)=>(dateOnly(a.date)||today)-(dateOnly(b.date)||today)).slice(0,8);
+    document.getElementById('overdueCenter').innerHTML=overdueItems.length ? overdueItems.map(x=>'<div class="dash-row"><div class="dash-main"><div class="dash-title">'+esc(x.type+': '+x.name)+'</div><div class="dash-meta">'+esc(x.meta||'')+'</div></div><div class="metric-danger">'+esc(formatDateOnly(x.date))+'</div></div>').join('') : '<div class="dash-row"><div class="muted">No overdue items.</div></div>';
+
+    const workload={};
+    taskRows.forEach(r=>{const id=String(r['Assigned To ID']||r['Assigned To']||'Unassigned').trim()||'Unassigned';const name=r.assignedToName||teamNameById.get(id)||id;if(!workload[id])workload[id]={name,assigned:0,progress:0,completed:0,overdue:0};workload[id].assigned++;if(/in progress|ongoing/i.test(String(r.Status||'')))workload[id].progress++;if(isCompleted(r.Status))workload[id].completed++;if(taskOverdue(r))workload[id].overdue++;});
+    const workloadRows=Object.values(workload);
+    document.getElementById('teamWorkload').innerHTML=workloadRows.length?workloadRows.map(x=>'<tr><td>'+esc(x.name)+'</td><td>'+x.assigned+'</td><td>'+x.progress+'</td><td>'+x.completed+'</td><td class="'+(x.overdue?'metric-danger':'metric-good')+'">'+x.overdue+'</td></tr>').join(''):'<tr><td colspan="5">No workload data.</td></tr>';
+
+    const recentActivity=[...activityRows].sort((a,b)=>(dateOnly(b.Date)||new Date(0))-(dateOnly(a.Date)||new Date(0))).slice(0,8);
+    document.getElementById('recentActivity').innerHTML=recentActivity.length?recentActivity.map(r=>'<div class="dash-row"><div class="dash-main"><div class="dash-title">'+esc(r.Description||r['Activity Type']||'Activity')+'</div><div class="dash-meta">'+esc(r.userName||r.User||'')+' · '+esc(r.clientName||r['Client ID']||'')+' · '+esc(r.projectName||r['Project ID']||'')+'</div></div><div>'+esc(formatDateOnly(r.Date))+'</div></div>').join(''):'<div class="dash-row"><div class="muted">No recent activity.</div></div>';
     
     const notes = Array.isArray(data.ownerNotes) ? data.ownerNotes.join(' • ') : (data.ownerNotes || '');
     document.getElementById('notes').textContent = notes || 'No owner notes have been added yet.';
