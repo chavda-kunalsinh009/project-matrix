@@ -1,5 +1,4 @@
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxeI5mwAoQHlNbUryMtPQTFqaQMEgwP846LE9ydinx1xQmqrTQT5n25Hf-oliK_hJfT/exec?api=dashboard';
-
+const APPS_SCRIPT_URL = process.env.APPS_SCRIPT_URL + '?api=dashboard';
 let cachedData = null;
 let cachedAt = 0;
 const CACHE_TTL_MS = 10000;
