@@ -654,6 +654,7 @@
     const taskCount = Number(stats.tasks ?? (Array.isArray(source.tasks) ? source.tasks.length : 0));
     const teamCount = Number(stats.team ?? (Array.isArray(source.team) ? source.team.length : 0));
     const paymentCount = Number(stats.payments ?? (Array.isArray(source.payments) ? source.payments.length : 0));
+    const projectCount = Number(stats.projects ?? (Array.isArray(source.projects) ? source.projects.length : 0));
 
     try {
     // Derived dashboard intelligence from live module data.
@@ -755,6 +756,23 @@
     document.getElementById('recentActivity').innerHTML=recentActivity.length?recentActivity.map(r=>'<div class="dash-row"><div class="dash-main"><div class="dash-title">'+esc(r.Description||r['Activity Type']||'Activity')+'</div><div class="dash-meta">'+esc(r.userName||r.User||'')+' · '+esc(r.clientName||r['Client ID']||'')+' · '+esc(r.projectName||r['Project ID']||'')+'</div></div><div>'+esc(formatDateOnly(r.Date))+'</div></div>').join(''):'<div class="dash-row"><div class="muted">No recent activity.</div></div>';
     
     const projectCount = Number(stats.projects ?? (Array.isArray(source.projects) ? source.projects.length : 0));
+
+    document.getElementById('leads').textContent = prospectCount;
+    document.getElementById('clients').textContent = clientCount;
+    document.getElementById('revenue').textContent = money(stats.revenue ?? data.revenue);
+    document.getElementById('pending').textContent = money(stats.pendingRevenue ?? data.pendingRevenue);
+    document.getElementById('collection').textContent = money(stats.paymentCollection ?? data.paymentCollection);
+    document.getElementById('conversion').textContent = pct(stats.conversionRate ?? data.conversionRate);
+    document.getElementById('activity').textContent = taskCount + teamCount;
+    document.getElementById('payments').textContent = paymentCount;
+    document.getElementById('projects').textContent = projectCount;
+    document.getElementById('tasks').textContent = taskCount;
+    document.getElementById('team').textContent = teamCount;
+    document.getElementById('collectionBar').style.width = Math.min(100,Math.max(0,Number(stats.paymentCollection ?? data.paymentCollection ?? 0))) + '%';
+    document.getElementById('conversionBar').style.width = Math.min(100,Math.max(0,Number(stats.conversionRate ?? data.conversionRate ?? 0))) + '%';
+    
+
+    } catch(dashboardError) { console.error('Dashboard insights failed:', dashboardError); }
 
     document.getElementById('leads').textContent = prospectCount;
     document.getElementById('clients').textContent = clientCount;
