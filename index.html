@@ -715,6 +715,9 @@
     const followUpcomingRows=followupRows.filter(r=>{const d=dateOnly(r['Next Follow-up']);return d&&d>today&&!/completed|done/i.test(String(r.Status||''));});
     const followCompletedRows=followupRows.filter(r=>/completed|done/i.test(String(r.Status||'')));
 
+    const setDash=(id,value)=>{const el=document.getElementById(id);if(el)el.textContent=value;};
+    const setDashWidth=(id,value)=>{const el=document.getElementById(id);if(el)el.style.width=value;};
+
 
     } catch(dashboardError) { console.error('Dashboard insights failed:', dashboardError); }
 
@@ -797,42 +800,42 @@
     document.getElementById('collectionBar').style.width = collectionRate + '%';
     document.getElementById('conversionBar').style.width = Math.min(100,Math.max(0,Number(stats.conversionRate ?? data.conversionRate ?? 0))) + '%';
 
-    document.getElementById('activeProjects').textContent=activeProjectRows.length;
-    document.getElementById('overdueProjects').textContent=overdueProjectRows.length;
-    document.getElementById('openTasks').textContent=openTaskRows.length;
-    document.getElementById('overdueTasks').textContent=overdueTaskRows.length;
-    document.getElementById('completedTasks').textContent=taskCompleted;
-    document.getElementById('dueToday').textContent=dueTodayRows.length;
-    document.getElementById('dueThisWeek').textContent=dueWeekRows.length;
-    document.getElementById('completedProjects').textContent=completedProjectRows.length;
-    document.getElementById('dashRevenue').textContent=money(revenue);
-    document.getElementById('dashCollected').textContent=money(collected);
-    document.getElementById('dashOutstanding').textContent=money(outstanding);
-    document.getElementById('dashOverdueInvoices').textContent=overdueInvoiceCount;
+    setDash('activeProjects',activeProjectRows.length);
+    setDash('overdueProjects',overdueProjectRows.length);
+    setDash('openTasks',openTaskRows.length);
+    setDash('overdueTasks',overdueTaskRows.length);
+    setDash('completedTasks',taskCompleted);
+    setDash('dueToday',dueTodayRows.length);
+    setDash('dueThisWeek',dueWeekRows.length);
+    setDash('completedProjects',completedProjectRows.length);
+    setDash('dashRevenue',money(revenue));
+    setDash('dashCollected',money(collected));
+    setDash('dashOutstanding',money(outstanding));
+    setDash('dashOverdueInvoices',overdueInvoiceCount);
     document.getElementById('collectionPercent').textContent=collectionRate.toFixed(1)+'%';
-    document.getElementById('dashboardCollectionBar').style.width=collectionRate+'%';
-    document.getElementById('followToday').textContent=followTodayRows.length;
-    document.getElementById('followUpcoming').textContent=followUpcomingRows.length;
-    document.getElementById('followOverdue').textContent=followOverdueRows.length;
-    document.getElementById('followCompleted').textContent=followCompletedRows.length;
+    setDashWidth('dashboardCollectionBar',collectionRate+'%');
+    setDash('followToday',followTodayRows.length);
+    setDash('followUpcoming',followUpcomingRows.length);
+    setDash('followOverdue',followOverdueRows.length);
+    setDash('followCompleted',followCompletedRows.length);
 
     const upcoming=[...taskRows].filter(r=>{const d=taskDate(r);return d&&d>=today&&isOpen(r.Status);}).sort((a,b)=>taskDate(a)-taskDate(b)).slice(0,5);
-    document.getElementById('upcomingDeadlines').innerHTML=upcoming.length ? upcoming.map(r=>'<div class="dash-row"><div class="dash-main"><div class="dash-title">'+esc(r['Task Name']||r['Task ID'])+'</div><div class="dash-meta">'+esc(projectNameById.get(String(r['Project ID']||'').trim())||r['Project ID']||'')+' · '+esc(r.Status||'Not Started')+'</div></div><div>'+esc(formatDateOnly(r.Deadline))+'</div></div>').join('') : '<div class="dash-row"><div class="muted">No upcoming deadlines.</div></div>';
+    const upcomingEl=document.getElementById('upcomingDeadlines'); if(upcomingEl) upcomingEl.innerHTML=upcoming.length ? upcoming.map(r=>'<div class="dash-row"><div class="dash-main"><div class="dash-title">'+esc(r['Task Name']||r['Task ID'])+'</div><div class="dash-meta">'+esc(projectNameById.get(String(r['Project ID']||'').trim())||r['Project ID']||'')+' · '+esc(r.Status||'Not Started')+'</div></div><div>'+esc(formatDateOnly(r.Deadline))+'</div></div>').join('') : '<div class="dash-row"><div class="muted">No upcoming deadlines.</div></div>';
 
     const overdueItems=[
       ...overdueTaskRows.slice(0,5).map(r=>({type:'Task',name:r['Task Name']||r['Task ID'],date:r.Deadline,meta:projectNameById.get(String(r['Project ID']||'').trim())||r['Project ID']})),
       ...overdueProjectRows.slice(0,5).map(r=>({type:'Project',name:r['Project Name']||r['Project ID'],date:r.Deadline,meta:r.Status||''})),
       ...overdueInvoiceRows.slice(0,5).map(r=>({type:'Invoice',name:r['Invoice ID'],date:r['Due Date'],meta:money(Number(r.Amount||0)-Number(r['Paid Amount']||0))}))
     ].sort((a,b)=>(dateOnly(a.date)||today)-(dateOnly(b.date)||today)).slice(0,8);
-    document.getElementById('overdueCenter').innerHTML=overdueItems.length ? overdueItems.map(x=>'<div class="dash-row"><div class="dash-main"><div class="dash-title">'+esc(x.type+': '+x.name)+'</div><div class="dash-meta">'+esc(x.meta||'')+'</div></div><div class="metric-danger">'+esc(formatDateOnly(x.date))+'</div></div>').join('') : '<div class="dash-row"><div class="muted">No overdue items.</div></div>';
+    const overdueEl=document.getElementById('overdueCenter'); if(overdueEl) overdueEl.innerHTML=overdueItems.length ? overdueItems.map(x=>'<div class="dash-row"><div class="dash-main"><div class="dash-title">'+esc(x.type+': '+x.name)+'</div><div class="dash-meta">'+esc(x.meta||'')+'</div></div><div class="metric-danger">'+esc(formatDateOnly(x.date))+'</div></div>').join('') : '<div class="dash-row"><div class="muted">No overdue items.</div></div>';
 
     const workload={};
     taskRows.forEach(r=>{const id=String(r['Assigned To ID']||r['Assigned To']||'Unassigned').trim()||'Unassigned';const name=r.assignedToName||teamNameById.get(id)||id;if(!workload[id])workload[id]={name,assigned:0,progress:0,completed:0,overdue:0};workload[id].assigned++;if(/in progress|ongoing/i.test(String(r.Status||'')))workload[id].progress++;if(isCompleted(r.Status))workload[id].completed++;if(taskOverdue(r))workload[id].overdue++;});
     const workloadRows=Object.values(workload);
-    document.getElementById('teamWorkload').innerHTML=workloadRows.length?workloadRows.map(x=>'<tr><td>'+esc(x.name)+'</td><td>'+x.assigned+'</td><td>'+x.progress+'</td><td>'+x.completed+'</td><td class="'+(x.overdue?'metric-danger':'metric-good')+'">'+x.overdue+'</td></tr>').join(''):'<tr><td colspan="5">No workload data.</td></tr>';
+    const workloadEl=document.getElementById('teamWorkload'); if(workloadEl) workloadEl.innerHTML=workloadRows.length?workloadRows.map(x=>'<tr><td>'+esc(x.name)+'</td><td>'+x.assigned+'</td><td>'+x.progress+'</td><td>'+x.completed+'</td><td class="'+(x.overdue?'metric-danger':'metric-good')+'">'+x.overdue+'</td></tr>').join(''):'<tr><td colspan="5">No workload data.</td></tr>';
 
     const recentActivity=[...activityRows].sort((a,b)=>(dateOnly(b.Date)||new Date(0))-(dateOnly(a.Date)||new Date(0))).slice(0,8);
-    document.getElementById('recentActivity').innerHTML=recentActivity.length?recentActivity.map(r=>'<div class="dash-row"><div class="dash-main"><div class="dash-title">'+esc(r.Description||r['Activity Type']||'Activity')+'</div><div class="dash-meta">'+esc(r.userName||r.User||'')+' · '+esc(r.clientName||r['Client ID']||'')+' · '+esc(r.projectName||r['Project ID']||'')+'</div></div><div>'+esc(formatDateOnly(r.Date))+'</div></div>').join(''):'<div class="dash-row"><div class="muted">No recent activity.</div></div>';
+    const recentActivityEl=document.getElementById('recentActivity'); if(recentActivityEl) recentActivityEl.innerHTML=recentActivity.length?recentActivity.map(r=>'<div class="dash-row"><div class="dash-main"><div class="dash-title">'+esc(r.Description||r['Activity Type']||'Activity')+'</div><div class="dash-meta">'+esc(r.userName||r.User||'')+' · '+esc(r.clientName||r['Client ID']||'')+' · '+esc(r.projectName||r['Project ID']||'')+'</div></div><div>'+esc(formatDateOnly(r.Date))+'</div></div>').join(''):'<div class="dash-row"><div class="muted">No recent activity.</div></div>';
     
     } catch(dashboardError) { console.error('Dashboard insights failed:', dashboardError); }
 
