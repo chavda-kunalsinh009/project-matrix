@@ -479,7 +479,11 @@
   let isAdminMode = false;
 
   const money = n => '₹' + Number(n || 0).toLocaleString('en-IN',{maximumFractionDigits:2});
-  const pct = n => Number(n || 0).toFixed(1) + '%';
+  const pct = n => {
+    const v = Number(n || 0);
+    const normalized = v > 100 ? v / 100 : v;
+    return normalized.toFixed(1) + '%';
+  };
 
   function rowsOf(block){ return block && Array.isArray(block.rows) ? block.rows : []; }
   function text(v){ return v === null || v === undefined || String(v).trim() === '' ? '-' : String(v); }
