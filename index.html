@@ -493,7 +493,14 @@
   function statusBadge(v){
     if(!v) return '-';
     const s=String(v), n=s.toLowerCase();
-    const cls=n.includes('completed')||n.includes('received')||n.includes('active')||n.includes('paid') ? 'green' : (n.includes('high')||n.includes('overdue')||n.includes('cancelled')||n.includes('rejected') ? 'red' : (n.includes('medium') ? 'yellow' : (n.includes('low') ? 'purple' : (n.includes('in progress')||n.includes('in-progress')||n.includes('ongoing') ? 'blue' : (n.includes('pending')||n.includes('planning')||n.includes('partial')||n.includes('new') ? 'orange' : (n.includes('not started') ? 'purple' : '')))));
+    let cls = '';
+    if(n.includes('completed')||n.includes('received')||n.includes('active')||n.includes('paid')) cls='green';
+    else if(n.includes('high')||n.includes('overdue')||n.includes('cancelled')||n.includes('rejected')) cls='red';
+    else if(n.includes('medium')) cls='yellow';
+    else if(n.includes('low')) cls='purple';
+    else if(n.includes('in progress')||n.includes('in-progress')||n.includes('ongoing')) cls='blue';
+    else if(n.includes('pending')||n.includes('planning')||n.includes('partial')||n.includes('new')) cls='orange';
+    else if(n.includes('not started')) cls='purple';
     return '<span class="badge '+cls+'">'+esc(s)+'</span>';
   }
   function contact(r){
