@@ -207,6 +207,19 @@
   </div>
 
   <div class="dashboard-grid">
+    <div class="section admin-only">
+      <div class="section-head">Financial Overview <span class="section-meta">Collection and outstanding balance</span></div>
+      <div class="health-grid">
+        <div class="health-card info"><div class="label">Revenue</div><div class="value" id="dashRevenue">₹0</div></div>
+        <div class="health-card success"><div class="label">Collected</div><div class="value" id="dashCollected">₹0</div></div>
+        <div class="health-card warning"><div class="label">Outstanding</div><div class="value" id="dashOutstanding">₹0</div></div>
+        <div class="health-card danger"><div class="label">Overdue Invoices</div><div class="value" id="dashOverdueInvoices">0</div></div>
+      </div>
+      <div style="padding:0 18px 18px"><div class="label">Collection progress <span id="collectionPercent">0.0%</span></div><div class="progress"><div class="bar" id="dashboardCollectionBar"></div></div></div>
+    </div>
+  </div>
+
+  <div class="dashboard-grid">
     <div class="section">
       <div class="section-head">Upcoming Deadlines <span class="section-meta">Next 5 project tasks</span></div>
       <div class="dashboard-list" id="upcomingDeadlines"><div class="dash-row"><div class="muted">No upcoming deadlines.</div></div></div>
