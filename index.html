@@ -590,20 +590,32 @@
     table.innerHTML=rows.length ? rows.map(builder).join('') : '<tr><td colspan="'+colspan+'" class="empty">No records found.</td></tr>';
   }
 
+  function getModuleRows(source,name,data){
+    const value = source && source[name];
+    if(Array.isArray(value)) return value;
+    if(value && Array.isArray(value.rows)) return value.rows;
+    const legacyMap = {
+      prospects:'prospectsData', clients:'clientsData', projects:'projectsData', tasks:'tasksData',
+      team:'teamData', invoices:'invoicesData', payments:'paymentsData', activities:'activitiesData',
+      followUps:'followUpsData', documents:'documentsData'
+    };
+    return rowsOf(data && data[legacyMap[name]]);
+  }
+
   function renderDataTables(data){
     // The live dashboard API returns the full datasets inside data.data.
     // Keep a small compatibility layer so older payload shapes also continue to work.
     const source = data.data || {};
-    const prospects=Array.isArray(source.prospects) ? source.prospects : rowsOf(data.prospectsData);
-    const clients=Array.isArray(source.clients) ? source.clients : rowsOf(data.clientsData);
-    const projects=Array.isArray(source.projects) ? source.projects : rowsOf(data.projectsData);
-    const tasks=Array.isArray(source.tasks) ? source.tasks : rowsOf(data.tasksData);
-    const team=Array.isArray(source.team) ? source.team : rowsOf(data.teamData);
-    const invoices=Array.isArray(source.invoices) ? source.invoices : rowsOf(data.invoicesData);
-    const payments=Array.isArray(source.payments) ? source.payments : rowsOf(data.paymentsData);
-    const activities=Array.isArray(source.activities) ? source.activities : rowsOf(data.activitiesData);
-    const followups=Array.isArray(source.followUps) ? source.followUps : rowsOf(data.followUpsData);
-    const documents=Array.isArray(source.documents) ? source.documents : rowsOf(data.documentsData);
+    const prospects=getModuleRows(source,'prospects',data);
+    const clients=getModuleRows(source,'clients',data);
+    const projects=getModuleRows(source,'projects',data);
+    const tasks=getModuleRows(source,'tasks',data);
+    const team=getModuleRows(source,'team',data);
+    const invoices=getModuleRows(source,'invoices',data);
+    const payments=getModuleRows(source,'payments',data);
+    const activities=getModuleRows(source,'activities',data);
+    const followups=getModuleRows(source,'followUps',data);
+    const documents=getModuleRows(source,'documents',data);
 
     setTable('prospectsTable',prospects,r =>
       '<tr><td><span class="mini-title">'+esc(r.Name)+'</span></td><td>'+esc(r.Business)+'</td><td>'+contact(r)+'</td><td>'+esc(r.Service)+'</td><td>'+esc(r.Source)+'</td><td>'+money(r.Quote)+'</td><td>'+statusBadge(r.Status)+'</td><td>'+esc(formatDateOnly(r['Follow-up Date']))+'</td><td>'+ (isAdminMode ? '<button class="action-btn" type="button" data-prospect-edit="'+esc(r['Prospect ID'])+'">Edit</button><button class="action-btn" type="button" data-prospect-delete="'+esc(r['Prospect ID'])+'">Delete</button>' : '<span class="muted">View only</span>') +'</td></tr>',10,'prospectsMeta');
@@ -659,7 +671,12 @@
     window.__dashboardData=data;
     const stats = data.stats || {};
     const source = data.data || {};
-    const prospectRows = Array.isArray(source.prospects) ? source.prospects : [];
+    const moduleRows = {
+      prospects:getModuleRows(source,'prospects',data), clients:getModuleRows(source,'clients',data), projects:getModuleRows(source,'projects',data),
+      tasks:getModuleRows(source,'tasks',data), team:getModuleRows(source,'team',data), invoices:getModuleRows(source,'invoices',data),
+      payments:getModuleRows(source,'payments',data), followUps:getModuleRows(source,'followUps',data), activities:getModuleRows(source,'activities',data), documents:getModuleRows(source,'documents',data)
+    };
+    const prospectRows = moduleRows.prospects;
     
     // Use numeric values from the API's stats object.
     const prospectCount = Number(stats.prospects ?? data.leads ?? prospectRows.length ?? 0);
@@ -680,13 +697,13 @@
       if(/^\d{2}\/\d{2}\/\d{4}$/.test(s)){const p=s.split('/');return new Date(Number(p[2]),Number(p[1])-1,Number(p[0]));}
       const d=new Date(s); if(isNaN(d.getTime())) return null; d.setHours(0,0,0,0); return d;
     };
-    const projectRows=Array.isArray(source.projects)?source.projects:[];
-    const taskRows=Array.isArray(source.tasks)?source.tasks:[];
-    const invoiceRows=Array.isArray(source.invoices)?source.invoices:[];
-    const paymentRows=Array.isArray(source.payments)?source.payments:[];
-    const followupRows=Array.isArray(source.followUps)?source.followUps:[];
-    const activityRows=Array.isArray(source.activities)?source.activities:[];
-    const teamRows=Array.isArray(source.team)?source.team:[];
+    const projectRows=moduleRows.projects;
+    const taskRows=moduleRows.tasks;
+    const invoiceRows=moduleRows.invoices;
+    const paymentRows=moduleRows.payments;
+    const followupRows=moduleRows.followUps;
+    const activityRows=moduleRows.activities;
+    const teamRows=moduleRows.team;
     const projectNameById=new Map(projectRows.map(r=>[String(r['Project ID']||r.id||r.ID||'').trim(),r['Project Name']||r.name||r['Project ID']||'']));
     const teamNameById=new Map(teamRows.map(r=>[String(teamMemberId(r)).trim(),r.Name||r.name||teamMemberId(r)]));
     const taskDate=r=>dateOnly(r.Deadline);
