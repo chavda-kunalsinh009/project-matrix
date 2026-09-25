@@ -1622,9 +1622,13 @@
 
   document.getElementById('refreshBtn').addEventListener('click', function(){ refreshDashboard(); });
   
-  // Show the dashboard immediately. If cached data exists, display it now.
-  // Fresh Google Sheets data is fetched in the background and replaces it
-  // automatically when available.
+  // Restore the current Admin UI state immediately on hard refresh.
+  // The token is still verified server-side; this only prevents a visible
+  // Normal User flash while the verification request is in flight.
+  isAdminMode = !!localStorage.getItem(ADMIN_TOKEN_KEY);
+  updateAdminUI();
+
+  // Show cached data immediately, then replace it with fresh Google Sheets data.
   loadCachedDashboard();
   document.getElementById('loading').style.display='none';
   updateAdminUI();
