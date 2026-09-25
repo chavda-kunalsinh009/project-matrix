@@ -48,6 +48,9 @@
     .badge.green{background:#ecfdf5;color:#047857;border-color:#bbf7d0}
     .badge.orange{background:#fff7ed;color:#c2410c;border-color:#fed7aa}
     .badge.red{background:#fff1f2;color:#be123c;border-color:#fecdd3}
+    .badge.yellow{background:#fefce8;color:#a16207;border-color:#fde68a}
+    .badge.purple{background:#f5f3ff;color:#6d28d9;border-color:#ddd6fe}
+    .badge.blue{background:#eff6ff;color:#1d4ed8;border-color:#bfdbfe}
     .mini-title{font-weight:700;color:#172033}
     .subtext{display:block;color:#8994a6;font-size:11px;margin-top:3px}
     @media(max-width:600px){.data-nav{overflow-x:auto;flex-wrap:nowrap;padding-bottom:4px}.data-nav button{white-space:nowrap}}
@@ -490,7 +493,7 @@
   function statusBadge(v){
     if(!v) return '-';
     const s=String(v), n=s.toLowerCase();
-    const cls=n.includes('completed')||n.includes('received')||n.includes('active')||n.includes('paid') ? 'green' : (n.includes('pending')||n.includes('planning')||n.includes('partial')||n.includes('new') ? 'orange' : '');
+    const cls=n.includes('completed')||n.includes('received')||n.includes('active')||n.includes('paid') ? 'green' : (n.includes('high')||n.includes('overdue')||n.includes('cancelled')||n.includes('rejected') ? 'red' : (n.includes('medium') ? 'yellow' : (n.includes('low') ? 'purple' : (n.includes('in progress')||n.includes('in-progress')||n.includes('ongoing') ? 'blue' : (n.includes('pending')||n.includes('planning')||n.includes('partial')||n.includes('new') ? 'orange' : (n.includes('not started') ? 'purple' : '')))));
     return '<span class="badge '+cls+'">'+esc(s)+'</span>';
   }
   function contact(r){
