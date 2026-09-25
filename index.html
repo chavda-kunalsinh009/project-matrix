@@ -709,14 +709,16 @@
   }
   function bindTaskActions(){
     document.querySelectorAll('[data-task-edit]').forEach(b=>b.onclick=()=>{
-      const r=currentTaskRows().find(x=>String(x['Task ID'])===String(b.dataset.taskEdit));
-      if(r) openTaskModal(r);
+      const id=String(b.dataset.taskEdit||'').trim();
+      const r=currentTaskRows().find(x=>String(x['Task ID']||x.TaskID||x.id||x.ID||'').trim()===id);
+      if(r) openTaskModal(r); else alert('Task record not found. Please refresh the page.');
     });
     document.querySelectorAll('[data-task-delete]').forEach(b=>b.onclick=async()=>{
       if(!isAdminMode){alert('Enable Admin Mode to delete tasks.');return;}
-      const r=currentTaskRows().find(x=>String(x['Task ID'])===String(b.dataset.taskDelete));
-      if(!r||!confirm('Delete task '+(r['Task Name']||r['Task ID'])+'? This removes the row from Google Sheets.')) return;
-      b.disabled=true;try{await mutateTask('delete',{taskId:r['Task ID']});await refreshDashboard()}catch(e){alert(e.message)}finally{b.disabled=false}
+      const id=String(b.dataset.taskDelete||'').trim();
+      const r=currentTaskRows().find(x=>String(x['Task ID']||x.TaskID||x.id||x.ID||'').trim()===id);
+      if(!r||!confirm('Delete task '+(r['Task Name']||r['Task ID']||id)+'? This removes the row from Google Sheets.')) return;
+      b.disabled=true;try{await mutateTask('delete',{taskId:id});await refreshDashboard()}catch(e){alert(e.message)}finally{b.disabled=false}
     });
   }
 
@@ -1025,15 +1027,17 @@
   }
   function bindTeamActions(){
     document.querySelectorAll('[data-team-edit]').forEach(b=>b.onclick=()=>{
-      const r=currentTeamRows().find(x=>String(teamMemberId(x))===String(b.dataset.teamEdit));
-      if(r) openTeamModal(r);
+      const id=String(b.dataset.teamEdit||'').trim();
+      const r=currentTeamRows().find(x=>String(teamMemberId(x)||x['Team ID']||x.id||x.ID||'').trim()===id);
+      if(r) openTeamModal(r); else alert('Team member record not found. Please refresh the page.');
     });
     document.querySelectorAll('[data-team-delete]').forEach(b=>b.onclick=async()=>{
       if(!isAdminMode){alert('Enable Admin Mode to delete team members.');return;}
-      const r=currentTeamRows().find(x=>String(teamMemberId(x))===String(b.dataset.teamDelete));
-      if(!r||!confirm('Delete team member '+(r.Name||b.dataset.teamDelete)+'? This removes the row from Google Sheets.')) return;
+      const id=String(b.dataset.teamDelete||'').trim();
+      const r=currentTeamRows().find(x=>String(teamMemberId(x)||x['Team ID']||x.id||x.ID||'').trim()===id);
+      if(!r||!confirm('Delete team member '+(r.Name||id)+'? This removes the row from Google Sheets.')) return;
       b.disabled=true;
-      try{await mutateTeam('delete',{teamMemberId:b.dataset.teamDelete});await refreshDashboard()}catch(e){alert(e.message)}finally{b.disabled=false}
+      try{await mutateTeam('delete',{teamMemberId:id});await refreshDashboard()}catch(e){alert(e.message)}finally{b.disabled=false}
     });
   }
 
